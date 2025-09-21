@@ -12,14 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { LeadCreateModal } from '@/components/leads/LeadCreateModal';
 import { useLeads } from '@/hooks/useLeads';
 import {
   Lead,
-  LeadChannel,
-  LeadSubchannel,
   LeadStage,
   STAGE_LABELS,
   CHANNEL_LABELS,
@@ -53,17 +50,6 @@ export default function Leads() {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newLead, setNewLead] = useState({
-    company_name: '',
-    contact_name: '',
-    contact_role: '',
-    phone: '',
-    email: '',
-    channel: 'OUTBOUND_APOLLO' as LeadChannel,
-    subchannel: 'NINGUNO' as LeadSubchannel,
-    owner_id: '',
-    notes: '',
-  });
 
   // Filtrar leads
   const filteredLeads = leads.filter((lead) => {
@@ -78,22 +64,9 @@ export default function Leads() {
     return searchMatch && stageMatch && channelMatch;
   });
 
-  const handleCreateLead = async () => {
-    if (!newLead.company_name.trim()) return;
-
+  const handleCreateLead = async (leadData: any) => {
     try {
-      await createLead(newLead);
-      setNewLead({
-        company_name: '',
-        contact_name: '',
-        contact_role: '',
-        phone: '',
-        email: '',
-        channel: 'OUTBOUND_APOLLO',
-        subchannel: 'NINGUNO',
-        owner_id: '',
-        notes: '',
-      });
+      await createLead(leadData);
       setCreateDialogOpen(false);
     } catch (error) {
       console.error('Error creating lead:', error);
@@ -162,134 +135,14 @@ export default function Leads() {
               <Download className="h-4 w-4" />
               Exportar
             </Button>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" size="lg">
-                  <Plus className="h-4 w-4" />
-                  Nuevo Lead
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Lead</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="company_name">Empresa *</Label>
-                    <Input
-                      id="company_name"
-                      placeholder="Nombre de la empresa"
-                      value={newLead.company_name}
-                      onChange={(e) => setNewLead({...newLead, company_name: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="contact_name">Contacto</Label>
-                    <Input
-                      id="contact_name"
-                      placeholder="Nombre del contacto"
-                      value={newLead.contact_name}
-                      onChange={(e) => setNewLead({...newLead, contact_name: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="contact_role">Cargo</Label>
-                    <Input
-                      id="contact_role"
-                      placeholder="Cargo del contacto"
-                      value={newLead.contact_role}
-                      onChange={(e) => setNewLead({...newLead, contact_role: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Teléfono</Label>
-                    <Input
-                      id="phone"
-                      placeholder="+57 300 123 4567"
-                      value={newLead.phone}
-                      onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="contacto@empresa.com"
-                      value={newLead.email}
-                      onChange={(e) => setNewLead({...newLead, email: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="channel">Canal *</Label>
-                    <Select
-                      value={newLead.channel}
-                      onValueChange={(value) => setNewLead({...newLead, channel: value as LeadChannel})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="subchannel">Subcanal</Label>
-                    <Select
-                      value={newLead.subchannel}
-                      onValueChange={(value) => setNewLead({...newLead, subchannel: value as LeadSubchannel})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(SUBCHANNEL_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="owner_id">Comercial</Label>
-                    <Input
-                      id="owner_id"
-                      placeholder="Nombre del comercial (opcional)"
-                      value={newLead.owner_id}
-                      onChange={(e) => setNewLead({...newLead, owner_id: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCreateDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleCreateLead}
-                    disabled={!newLead.company_name.trim()}
-                  >
-                    Crear Lead
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              className="gap-2" 
+              size="lg"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Nuevo Lead
+            </Button>
           </div>
         </div>
 
@@ -626,6 +479,13 @@ export default function Leads() {
           </TableBody>
         </Table>
       </Card>
+
+      {/* Lead Creation Modal */}
+      <LeadCreateModal
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSave={handleCreateLead}
+      />
     </div>
   );
 }
