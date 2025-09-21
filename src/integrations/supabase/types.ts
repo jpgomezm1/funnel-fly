@@ -14,7 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      lead_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          from_stage: Database["public"]["Enums"]["lead_stage"] | null
+          id: number
+          lead_id: string
+          to_stage: Database["public"]["Enums"]["lead_stage"]
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          from_stage?: Database["public"]["Enums"]["lead_stage"] | null
+          id?: number
+          lead_id: string
+          to_stage: Database["public"]["Enums"]["lead_stage"]
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          from_stage?: Database["public"]["Enums"]["lead_stage"] | null
+          id?: number
+          lead_id?: string
+          to_stage?: Database["public"]["Enums"]["lead_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_stage_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          channel: Database["public"]["Enums"]["lead_channel"]
+          company_name: string
+          contact_name: string | null
+          contact_role: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          last_activity_at: string
+          notes: string | null
+          owner_id: string | null
+          phone: string | null
+          stage: Database["public"]["Enums"]["lead_stage"]
+          stage_entered_at: string
+          subchannel: Database["public"]["Enums"]["lead_subchannel"]
+          updated_at: string
+        }
+        Insert: {
+          channel?: Database["public"]["Enums"]["lead_channel"]
+          company_name: string
+          contact_name?: string | null
+          contact_role?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          last_activity_at?: string
+          notes?: string | null
+          owner_id?: string | null
+          phone?: string | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          stage_entered_at?: string
+          subchannel?: Database["public"]["Enums"]["lead_subchannel"]
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["lead_channel"]
+          company_name?: string
+          contact_name?: string | null
+          contact_role?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          last_activity_at?: string
+          notes?: string | null
+          owner_id?: string | null
+          phone?: string | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          stage_entered_at?: string
+          subchannel?: Database["public"]["Enums"]["lead_subchannel"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +114,16 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      lead_channel: "OUTBOUND_APOLLO" | "WARM_INTRO" | "INBOUND_REDES"
+      lead_stage:
+        | "PROSPECTO"
+        | "CONTACTADO"
+        | "DESCUBRIMIENTO"
+        | "DEMOSTRACION"
+        | "PROPUESTA"
+        | "CERRADO_GANADO"
+        | "CERRADO_PERDIDO"
+      lead_subchannel: "NINGUNO" | "INSTAGRAM" | "TIKTOK" | "LINKEDIN" | "OTRO"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +250,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      lead_channel: ["OUTBOUND_APOLLO", "WARM_INTRO", "INBOUND_REDES"],
+      lead_stage: [
+        "PROSPECTO",
+        "CONTACTADO",
+        "DESCUBRIMIENTO",
+        "DEMOSTRACION",
+        "PROPUESTA",
+        "CERRADO_GANADO",
+        "CERRADO_PERDIDO",
+      ],
+      lead_subchannel: ["NINGUNO", "INSTAGRAM", "TIKTOK", "LINKEDIN", "OTRO"],
+    },
   },
 } as const
