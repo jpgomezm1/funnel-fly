@@ -44,8 +44,8 @@ interface ChannelData {
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('weekly');
-  const [channelFilter, setChannelFilter] = useState<string>('');
-  const [ownerFilter, setOwnerFilter] = useState<string>('');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [weeklyMetrics, setWeeklyMetrics] = useState<MetricData[]>([]);
   const [monthlyMetrics, setMonthlyMetrics] = useState<MetricData[]>([]);
   const [channelDistribution, setChannelDistribution] = useState<ChannelData[]>([]);
@@ -204,12 +204,12 @@ export default function Dashboard() {
               <span className="text-sm font-medium">Filtros:</span>
             </div>
             
-            <Select value={channelFilter} onValueChange={setChannelFilter}>
+            <Select value={channelFilter || 'all'} onValueChange={(value) => setChannelFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Todos los canales" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los canales</SelectItem>
+                <SelectItem value="all">Todos los canales</SelectItem>
                 {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
@@ -218,12 +218,12 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
             
-            <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <Select value={ownerFilter || 'all'} onValueChange={(value) => setOwnerFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Todos los comerciales" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los comerciales</SelectItem>
+                <SelectItem value="all">Todos los comerciales</SelectItem>
                 <SelectItem value="sin-asignar">Sin asignar</SelectItem>
               </SelectContent>
             </Select>

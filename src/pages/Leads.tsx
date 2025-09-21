@@ -41,8 +41,8 @@ import {
 export default function Leads() {
   const { leads, loading, createLead, updateLeadStage } = useLeads();
   const [searchTerm, setSearchTerm] = useState('');
-  const [stageFilter, setStageFilter] = useState<string>('');
-  const [channelFilter, setChannelFilter] = useState<string>('');
+  const [stageFilter, setStageFilter] = useState<string>('all');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newLead, setNewLead] = useState({
     company_name: '',
@@ -62,8 +62,8 @@ export default function Leads() {
       lead.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const stageMatch = !stageFilter || lead.stage === stageFilter;
-    const channelMatch = !channelFilter || lead.channel === channelFilter;
+    const stageMatch = !stageFilter || stageFilter === 'all' || lead.stage === stageFilter;
+    const channelMatch = !channelFilter || channelFilter === 'all' || lead.channel === channelFilter;
     
     return searchMatch && stageMatch && channelMatch;
   });
@@ -257,7 +257,7 @@ export default function Leads() {
                 <SelectValue placeholder="Filtrar por etapa" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las etapas</SelectItem>
+                <SelectItem value="all">Todas las etapas</SelectItem>
                 {STAGE_ORDER.map((stage) => (
                   <SelectItem key={stage} value={stage}>
                     {STAGE_LABELS[stage]}
@@ -271,7 +271,7 @@ export default function Leads() {
                 <SelectValue placeholder="Filtrar por canal" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los canales</SelectItem>
+                <SelectItem value="all">Todos los canales</SelectItem>
                 {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}

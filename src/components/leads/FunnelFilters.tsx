@@ -186,14 +186,14 @@ export function FunnelFilters({ filters, onFiltersChange }: FunnelFiltersProps) 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Canal</label>
                 <Select 
-                  value={filters.channel || ''} 
-                  onValueChange={(value) => updateFilter('channel', value || null)}
+                  value={filters.channel || 'all'} 
+                  onValueChange={(value) => updateFilter('channel', value === 'all' ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos los canales" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los canales</SelectItem>
+                    <SelectItem value="all">Todos los canales</SelectItem>
                     {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>
                         {label}
@@ -207,14 +207,14 @@ export function FunnelFilters({ filters, onFiltersChange }: FunnelFiltersProps) 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Subcanal</label>
                 <Select 
-                  value={filters.subchannel || ''} 
-                  onValueChange={(value) => updateFilter('subchannel', value || null)}
+                  value={filters.subchannel || 'all'} 
+                  onValueChange={(value) => updateFilter('subchannel', value === 'all' ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos los subcanales" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los subcanales</SelectItem>
+                    <SelectItem value="all">Todos los subcanales</SelectItem>
                     {Object.entries(SUBCHANNEL_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>
                         {label}
@@ -228,14 +228,14 @@ export function FunnelFilters({ filters, onFiltersChange }: FunnelFiltersProps) 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Comercial</label>
                 <Select 
-                  value={filters.owner || ''} 
-                  onValueChange={(value) => updateFilter('owner', value || null)}
+                  value={filters.owner || 'all'} 
+                  onValueChange={(value) => updateFilter('owner', value === 'all' ? null : value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todos los comerciales" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos los comerciales</SelectItem>
+                    <SelectItem value="all">Todos los comerciales</SelectItem>
                     <SelectItem value="sin-asignar">Sin asignar</SelectItem>
                     {/* TODO: Cargar owners reales desde la base de datos */}
                   </SelectContent>
