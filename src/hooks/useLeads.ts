@@ -73,16 +73,30 @@ export const useLeads = () => {
 
   const createLead = async (leadData: Partial<Lead> & { company_name: string }) => {
     try {
+      // Asegurar que los campos obligatorios tengan valores por defecto
+      const leadToInsert = {
+        company_name: leadData.company_name,
+        contact_name: leadData.contact_name || null,
+        contact_role: leadData.contact_role || null,
+        phone: leadData.phone || null,
+        email: leadData.email || null,
+        channel: leadData.channel || 'OUTBOUND_APOLLO',
+        subchannel: leadData.subchannel || 'NINGUNO',
+        owner_id: leadData.owner_id || null,
+        notes: leadData.notes || null,
+        stage: 'PROSPECTO' as LeadStage,
+      };
+
       const { data, error } = await supabase
         .from('leads')
-        .insert({
-          ...leadData,
-          stage: 'PROSPECTO' as LeadStage,
-        })
+        .insert(leadToInsert)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       setLeads(prevLeads => [data, ...prevLeads]);
       
@@ -93,6 +107,7 @@ export const useLeads = () => {
 
       return data;
     } catch (err) {
+      console.error('Error creating lead:', err);
       const message = err instanceof Error ? err.message : 'Error al crear lead';
       toast({
         title: 'Error',

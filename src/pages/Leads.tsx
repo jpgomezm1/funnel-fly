@@ -219,10 +219,10 @@ export default function Leads() {
               </div>
               
               <div className="space-y-2 col-span-2">
-                <Label htmlFor="owner_id">Comercial *</Label>
+                <Label htmlFor="owner_id">Comercial</Label>
                 <Input
                   id="owner_id"
-                  placeholder="Nombre del comercial"
+                  placeholder="Nombre del comercial (opcional)"
                   value={newLead.owner_id}
                   onChange={(e) => setNewLead({...newLead, owner_id: e.target.value})}
                 />
@@ -238,7 +238,7 @@ export default function Leads() {
               </Button>
               <Button 
                 onClick={handleCreateLead}
-                disabled={!newLead.company_name.trim() || !newLead.owner_id.trim()}
+                disabled={!newLead.company_name.trim()}
               >
                 Crear Lead
               </Button>
