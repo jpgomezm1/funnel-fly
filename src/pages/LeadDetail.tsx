@@ -26,6 +26,7 @@ import { useLeadTimeline } from '@/hooks/useLeadTimeline';
 import { DealModal } from '@/components/deals/DealModal';
 import { LeadEditModal } from '@/components/leads/LeadEditModal';
 import { ActivityTimeline } from '@/components/leads/ActivityTimeline';
+import { LeadActivityLog } from '@/components/leads/LeadActivityLog';
 import { formatDateToBogota, formatDistanceToBogota } from '@/lib/date-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -371,8 +372,13 @@ export default function LeadDetail() {
           </Card>
         </div>
 
-        {/* Right Column - Activity Timeline */}
-        <div>
+        {/* Right Column - Activity Timeline and Log */}
+        <div className="space-y-6">
+          <LeadActivityLog 
+            leadId={id!}
+            onActivityAdded={refreshTimeline}
+          />
+          
           <ActivityTimeline 
             timeline={timeline} 
             isLoading={timelineLoading}

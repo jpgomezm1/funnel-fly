@@ -162,7 +162,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{metrics.activeDeals}</div>
             <p className="text-xs text-muted-foreground">
-              Contratos con status ACTIVE
+              Leads en pipeline con contratos
             </p>
           </CardContent>
         </Card>

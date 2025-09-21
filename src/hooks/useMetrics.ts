@@ -55,27 +55,39 @@ export function useMetrics() {
       if (feesHistoricalError) throw feesHistoricalError;
       const feesHistorical = feesHistoricalData?.reduce((sum, deal) => sum + (deal.implementation_fee_usd || 0), 0) || 0;
 
-      // Active deals count
+      // Active deals count - deals where lead is NOT in CERRADO_GANADO (deals activos en pipeline)
       const { data: activeDealsData, error: activeDealsError } = await supabase
         .from('deals')
-        .select('id', { count: 'exact' })
-        .eq('status', 'ACTIVE');
+        .select(`
+          id,
+          lead_id,
+          leads!inner(stage)
+        `)
+        .eq('status', 'ACTIVE')
+        .neq('leads.stage', 'CERRADO_GANADO');
       if (activeDealsError) throw activeDealsError;
 
-      // New closes this week - calculate on client side
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6); // Sunday
-      weekEnd.setHours(23, 59, 59, 999);
+      // New closes this week - calculate in America/Bogota timezone
+      const nowBogota = new Date();
+      // Ajustar a timezone de Bogotá (UTC-5)
+      const bogotaOffset = -5 * 60; // -5 horas en minutos
+      const localOffset = nowBogota.getTimezoneOffset(); // offset local en minutos
+      const totalOffset = localOffset - bogotaOffset; // diferencia total
+      
+      const weekStartBogota = new Date(nowBogota.getTime() + (totalOffset * 60 * 1000));
+      weekStartBogota.setDate(weekStartBogota.getDate() - weekStartBogota.getDay() + 1); // Monday
+      weekStartBogota.setHours(0, 0, 0, 0);
+      
+      const weekEndBogota = new Date(weekStartBogota);
+      weekEndBogota.setDate(weekEndBogota.getDate() + 6); // Sunday
+      weekEndBogota.setHours(23, 59, 59, 999);
       
       const { data: newClosesData, error: newClosesError } = await supabase
         .from('lead_stage_history')
         .select('id', { count: 'exact' })
         .eq('to_stage', 'CERRADO_GANADO')
-        .gte('changed_at', weekStart.toISOString())
-        .lte('changed_at', weekEnd.toISOString());
+        .gte('changed_at', weekStartBogota.toISOString())
+        .lte('changed_at', weekEndBogota.toISOString());
       if (newClosesError) throw newClosesError;
       const newClosesWeek = newClosesData?.length || 0;
 
