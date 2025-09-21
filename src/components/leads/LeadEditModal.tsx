@@ -6,6 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Lead, LeadChannel, LeadSubchannel, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
 
+// Comerciales disponibles
+const COMERCIALES = {
+  'juan_pablo_gomez': 'Juan Pablo Gomez',
+  'agustin_hoyos': 'Agustin Hoyos', 
+  'sara_garces': 'Sara Garces',
+  'pamela_puello': 'Pamela Puello'
+} as const;
+
 interface LeadEditModalProps {
   open: boolean;
   onClose: () => void;
@@ -27,6 +35,7 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
         email: lead.email || '',
         channel: lead.channel,
         subchannel: lead.subchannel,
+        owner_id: lead.owner_id || '',
       });
     }
   }, [open, lead]);
@@ -108,6 +117,29 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
             />
           </div>
 
+          {/* Comercial */}
+          <div className="grid gap-2">
+            <Label>Comercial</Label>
+            <Select 
+              value={formData.owner_id || ''} 
+              onValueChange={(value: string) => setFormData({ ...formData, owner_id: value || null })}
+            >
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Seleccionar comercial" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border border-border z-50">
+                <SelectItem value="" className="bg-background hover:bg-accent">
+                  Sin asignar
+                </SelectItem>
+                {Object.entries(COMERCIALES).map(([key, label]) => (
+                  <SelectItem key={key} value={key} className="bg-background hover:bg-accent">
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Channel */}
           <div className="grid gap-2">
             <Label>Canal</Label>
@@ -115,12 +147,12 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
               value={formData.channel} 
               onValueChange={(value: LeadChannel) => setFormData({ ...formData, channel: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-background">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border border-border z-50">
                 {Object.entries(CHANNEL_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
+                  <SelectItem key={key} value={key} className="bg-background hover:bg-accent">
                     {label}
                   </SelectItem>
                 ))}
@@ -135,12 +167,12 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
               value={formData.subchannel} 
               onValueChange={(value: LeadSubchannel) => setFormData({ ...formData, subchannel: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-background">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border border-border z-50">
                 {Object.entries(SUBCHANNEL_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
+                  <SelectItem key={key} value={key} className="bg-background hover:bg-accent">
                     {label}
                   </SelectItem>
                 ))}

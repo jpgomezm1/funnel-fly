@@ -39,6 +39,14 @@ import {
   Lead
 } from '@/types/database';
 
+// Comerciales disponibles
+const COMERCIALES_MAP = {
+  'juan_pablo_gomez': 'Juan Pablo Gomez',
+  'agustin_hoyos': 'Agustin Hoyos', 
+  'sara_garces': 'Sara Garces',
+  'pamela_puello': 'Pamela Puello'
+} as const;
+
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -251,9 +259,12 @@ export default function LeadDetail() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Owner ID</label>
-                  <p className="text-sm font-mono">
-                    {lead.owner_id ? lead.owner_id.slice(0, 8) + '...' : 'Sin asignar'}
+                  <label className="text-sm font-medium text-muted-foreground">Comercial</label>
+                  <p className="text-sm">
+                    {lead.owner_id && lead.owner_id in COMERCIALES_MAP ? 
+                      COMERCIALES_MAP[lead.owner_id as keyof typeof COMERCIALES_MAP] : 
+                      'Sin asignar'
+                    }
                   </p>
                 </div>
                 
