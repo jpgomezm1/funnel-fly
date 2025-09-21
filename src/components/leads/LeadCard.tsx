@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { Lead, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
 import { formatDistanceToBogota } from '@/lib/date-utils';
+import { cn, formatOwnerName } from '@/lib/utils';
 import {
   Building,
   User,
@@ -22,7 +23,6 @@ import {
 import { useState } from 'react';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals } from '@/hooks/useDeals';
-import { cn } from '@/lib/utils';
 
 interface LeadCardProps {
   lead: Lead;
@@ -184,7 +184,7 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
             <div className="flex items-center gap-1">
               <User className="h-3 w-3" />
               <span className="truncate">
-                {lead.owner_id ? `${lead.owner_id.slice(0, 8)}...` : 'Sin asignar'}
+                {formatOwnerName(lead.owner_id)}
               </span>
             </div>
             <div className="flex items-center gap-1">

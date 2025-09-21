@@ -6,15 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadChannel, LeadSubchannel, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
 import { Building, User, Phone, Mail, Activity, Target, Save, X, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, COMERCIALES_NAMES } from '@/lib/utils';
 
-// Comerciales disponibles
-const COMERCIALES = {
-  'juan_pablo_gomez': 'Juan Pablo Gomez',
-  'agustin_hoyos': 'Agustin Hoyos',
-  'sara_garces': 'Sara Garces',
-  'pamela_puello': 'Pamela Puello'
-} as const;
+// Usar el mapeo de comerciales centralizado
+const COMERCIALES = COMERCIALES_NAMES;
 
 interface LeadCreateModalProps {
   open: boolean;
