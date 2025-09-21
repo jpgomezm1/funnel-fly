@@ -121,14 +121,14 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
           <div className="grid gap-2">
             <Label>Comercial</Label>
             <Select 
-              value={formData.owner_id || ''} 
-              onValueChange={(value: string) => setFormData({ ...formData, owner_id: value || null })}
+              value={formData.owner_id || 'unassigned'} 
+              onValueChange={(value: string) => setFormData({ ...formData, owner_id: value === 'unassigned' ? null : value })}
             >
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Seleccionar comercial" />
               </SelectTrigger>
               <SelectContent className="bg-background border border-border z-50">
-                <SelectItem value="" className="bg-background hover:bg-accent">
+                <SelectItem value="unassigned" className="bg-background hover:bg-accent">
                   Sin asignar
                 </SelectItem>
                 {Object.entries(COMERCIALES).map(([key, label]) => (
