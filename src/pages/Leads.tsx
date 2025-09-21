@@ -52,6 +52,7 @@ export default function Leads() {
     email: '',
     channel: 'OUTBOUND_APOLLO' as LeadChannel,
     subchannel: 'NINGUNO' as LeadSubchannel,
+    owner_id: '',
     notes: '',
   });
 
@@ -81,6 +82,7 @@ export default function Leads() {
         email: '',
         channel: 'OUTBOUND_APOLLO',
         subchannel: 'NINGUNO',
+        owner_id: '',
         notes: '',
       });
       setCreateDialogOpen(false);
@@ -215,6 +217,16 @@ export default function Leads() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="owner_id">Comercial *</Label>
+                <Input
+                  id="owner_id"
+                  placeholder="Nombre del comercial"
+                  value={newLead.owner_id}
+                  onChange={(e) => setNewLead({...newLead, owner_id: e.target.value})}
+                />
+              </div>
             </div>
             
             <div className="flex justify-end gap-2 mt-6">
@@ -226,7 +238,7 @@ export default function Leads() {
               </Button>
               <Button 
                 onClick={handleCreateLead}
-                disabled={!newLead.company_name.trim()}
+                disabled={!newLead.company_name.trim() || !newLead.owner_id.trim()}
               >
                 Crear Lead
               </Button>

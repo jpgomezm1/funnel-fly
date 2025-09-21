@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useGoals } from '@/hooks/useGoals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,30 +26,51 @@ interface Goal {
   unit: string;
 }
 
-const defaultWeeklyGoals: Goal[] = [
-  { id: '1', type: 'weekly', metric: 'Prospectos', target: 45, current: 32, unit: 'leads' },
-  { id: '2', type: 'weekly', metric: 'Intentos de Contacto', target: 90, current: 78, unit: 'intentos' },
-  { id: '3', type: 'weekly', metric: 'Descubrimientos', target: 11, current: 8, unit: 'leads' },
-  { id: '4', type: 'weekly', metric: 'Demos', target: 5, current: 4, unit: 'demos' },
-  { id: '5', type: 'weekly', metric: 'Propuestas', target: 3, current: 2, unit: 'propuestas' },
-  { id: '6', type: 'weekly', metric: 'Cierres', target: 1, current: 1, unit: 'cierres' },
-];
-
-const defaultMonthlyGoals: Goal[] = [
-  { id: '7', type: 'monthly', metric: 'Prospectos', target: 180, current: 142, unit: 'leads' },
-  { id: '8', type: 'monthly', metric: 'Intentos de Contacto', target: 360, current: 298, unit: 'intentos' },
-  { id: '9', type: 'monthly', metric: 'Descubrimientos', target: 44, current: 36, unit: 'leads' },
-  { id: '10', type: 'monthly', metric: 'Demos', target: 20, current: 16, unit: 'demos' },
-  { id: '11', type: 'monthly', metric: 'Propuestas', target: 12, current: 9, unit: 'propuestas' },
-  { id: '12', type: 'monthly', metric: 'Cierres', target: 4, current: 3, unit: 'cierres' },
-];
+// Metas target por defecto (estas se pueden hacer editables más adelante)
+const defaultTargets = {
+  weekly: {
+    prospectos: 45,
+    contactados: 90,
+    descubrimientos: 11,
+    demostraciones: 5,
+    propuestas: 3,
+    cierres: 1,
+  },
+  monthly: {
+    prospectos: 180,
+    contactados: 360,
+    descubrimientos: 44,
+    demostraciones: 20,
+    propuestas: 12,
+    cierres: 4,
+  },
+};
 
 export default function Goals() {
-  const [weeklyGoals, setWeeklyGoals] = useState<Goal[]>(defaultWeeklyGoals);
-  const [monthlyGoals, setMonthlyGoals] = useState<Goal[]>(defaultMonthlyGoals);
+  const { weeklyMetrics, monthlyMetrics, loading } = useGoals();
+  const [targets, setTargets] = useState(defaultTargets);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newGoalTarget, setNewGoalTarget] = useState('');
+
+  // Convertir métricas a formato Goal
+  const weeklyGoals: Goal[] = [
+    { id: '1', type: 'weekly', metric: 'Prospectos', target: targets.weekly.prospectos, current: weeklyMetrics.prospectos, unit: 'leads' },
+    { id: '2', type: 'weekly', metric: 'Contactados', target: targets.weekly.contactados, current: weeklyMetrics.contactados, unit: 'contactados' },
+    { id: '3', type: 'weekly', metric: 'Descubrimientos', target: targets.weekly.descubrimientos, current: weeklyMetrics.descubrimientos, unit: 'leads' },
+    { id: '4', type: 'weekly', metric: 'Demos', target: targets.weekly.demostraciones, current: weeklyMetrics.demostraciones, unit: 'demos' },
+    { id: '5', type: 'weekly', metric: 'Propuestas', target: targets.weekly.propuestas, current: weeklyMetrics.propuestas, unit: 'propuestas' },
+    { id: '6', type: 'weekly', metric: 'Cierres', target: targets.weekly.cierres, current: weeklyMetrics.cierres, unit: 'cierres' },
+  ];
+
+  const monthlyGoals: Goal[] = [
+    { id: '7', type: 'monthly', metric: 'Prospectos', target: targets.monthly.prospectos, current: monthlyMetrics.prospectos, unit: 'leads' },
+    { id: '8', type: 'monthly', metric: 'Contactados', target: targets.monthly.contactados, current: monthlyMetrics.contactados, unit: 'contactados' },
+    { id: '9', type: 'monthly', metric: 'Descubrimientos', target: targets.monthly.descubrimientos, current: monthlyMetrics.descubrimientos, unit: 'leads' },
+    { id: '10', type: 'monthly', metric: 'Demos', target: targets.monthly.demostraciones, current: monthlyMetrics.demostraciones, unit: 'demos' },
+    { id: '11', type: 'monthly', metric: 'Propuestas', target: targets.monthly.propuestas, current: monthlyMetrics.propuestas, unit: 'propuestas' },
+    { id: '12', type: 'monthly', metric: 'Cierres', target: targets.monthly.cierres, current: monthlyMetrics.cierres, unit: 'cierres' },
+  ];
 
   const getGoalStatus = (current: number, target: number) => {
     const percentage = (current / target) * 100;
@@ -86,16 +108,28 @@ export default function Goals() {
   const handleSaveGoal = () => {
     if (!editingGoal || !newGoalTarget) return;
 
-    const updatedGoal = {
-      ...editingGoal,
-      target: parseInt(newGoalTarget)
+    const newTarget = parseInt(newGoalTarget);
+    const metricKey = editingGoal.metric.toLowerCase() as keyof typeof targets.weekly;
+    
+    // Mapear nombres de métricas
+    const metricMapping: { [key: string]: keyof typeof targets.weekly } = {
+      'prospectos': 'prospectos',
+      'contactados': 'contactados', 
+      'descubrimientos': 'descubrimientos',
+      'demos': 'demostraciones',
+      'propuestas': 'propuestas',
+      'cierres': 'cierres'
     };
 
-    if (editingGoal.type === 'weekly') {
-      setWeeklyGoals(prev => prev.map(g => g.id === editingGoal.id ? updatedGoal : g));
-    } else {
-      setMonthlyGoals(prev => prev.map(g => g.id === editingGoal.id ? updatedGoal : g));
-    }
+    const mappedKey = metricMapping[metricKey] || metricKey;
+
+    setTargets(prev => ({
+      ...prev,
+      [editingGoal.type]: {
+        ...prev[editingGoal.type],
+        [mappedKey]: newTarget
+      }
+    }));
 
     setDialogOpen(false);
     setEditingGoal(null);
@@ -243,11 +277,22 @@ export default function Goals() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Cargando métricas...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-foreground">Gestión de Metas</h1>
+        <div className="text-sm text-muted-foreground">
+          Datos actualizados en tiempo real desde el pipeline
+        </div>
       </div>
 
       {/* Tabs */}
