@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  KanbanSquare, 
-  Users, 
-  BarChart3, 
-  Target, 
+  KanbanSquare,
+  Users,
+  BarChart3,
+  Target,
+  FileText,
   Menu,
   X
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Funnel', href: '/', icon: KanbanSquare },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+  { name: 'Reporting', href: '/reporting', icon: FileText },
   { name: 'Metas', href: '/goals', icon: Target },
 ];
 

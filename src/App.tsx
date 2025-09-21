@@ -9,6 +9,7 @@ import Leads from "./pages/Leads";
 import Dashboard from "./pages/Dashboard";
 import Goals from "./pages/Goals";
 import LeadDetail from "./pages/LeadDetail";
+import Reporting from "./pages/Reporting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/leads/:id" element={<LeadDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/goals" element={<Goals />} />
+            <Route path="/reporting" element={<Reporting />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
