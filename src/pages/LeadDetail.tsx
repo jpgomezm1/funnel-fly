@@ -525,7 +525,7 @@ export default function LeadDetail() {
                                   "text-xs font-semibold",
                                   deal.status === 'ACTIVE' && "bg-green-500 hover:bg-green-600",
                                   deal.status === 'ON_HOLD' && "bg-yellow-500 hover:bg-yellow-600",
-                                  deal.status === 'CANCELLED' && "bg-red-500 hover:bg-red-600"
+                                  deal.status === 'CHURNED' && "bg-red-500 hover:bg-red-600"
                                 )}
                               >
                                 {DEAL_STATUS_LABELS[deal.status]}
