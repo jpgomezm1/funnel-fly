@@ -11,6 +11,7 @@ interface FunnelColumnProps {
   title: string;
   leads: Lead[];
   count: number;
+  dealsMap?: Record<string, any[]>;
 }
 
 const getStageColor = (stage: LeadStage) => {
@@ -39,7 +40,7 @@ const getBadgeVariant = (stage: LeadStage) => {
   return variants[stage] || 'secondary';
 };
 
-export function FunnelColumn({ stage, title, leads, count }: FunnelColumnProps) {
+export function FunnelColumn({ stage, title, leads, count, dealsMap = {} }: FunnelColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage,
   });
@@ -66,7 +67,11 @@ export function FunnelColumn({ stage, title, leads, count }: FunnelColumnProps) 
         >
           <SortableContext items={leads.map(lead => lead.id)} strategy={verticalListSortingStrategy}>
             {leads.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
+              <LeadCard 
+                key={lead.id} 
+                lead={lead} 
+                deals={dealsMap[lead.id] || []}
+              />
             ))}
           </SortableContext>
           

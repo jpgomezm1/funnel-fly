@@ -18,12 +18,18 @@ import {
 import { LeadCard } from '@/components/leads/LeadCard';
 import { FunnelColumn } from '@/components/leads/FunnelColumn';
 import { FunnelFilters } from '@/components/leads/FunnelFilters';
+import { DealModal } from '@/components/deals/DealModal';
 import { useLeads } from '@/hooks/useLeads';
+import { useDeals, useLeadDeals } from '@/hooks/useDeals';
 import { Lead, LeadStage, STAGE_ORDER, STAGE_LABELS } from '@/types/database';
 
 export default function Funnel() {
   const { leads, loading, updateLeadStage } = useLeads();
+  const { needsMrrRegistration, upsertDeal } = useDeals();
+  const { dealsMap } = useLeadDeals(leads.map(lead => lead.id));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [dealModalOpen, setDealModalOpen] = useState(false);
+  const [pendingLeadForDeal, setPendingLeadForDeal] = useState<Lead | null>(null);
   const [filters, setFilters] = useState({
     dateRange: null as { from: Date; to: Date } | null,
     channel: null as string | null,
@@ -63,20 +69,48 @@ export default function Funnel() {
     setActiveId(event.active.id as string);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
       const leadId = active.id as string;
       const newStage = over.id as LeadStage;
+      const lead = leads.find(l => l.id === leadId);
       
       // Verificar si es una etapa válida
-      if (STAGE_ORDER.includes(newStage)) {
-        updateLeadStage(leadId, newStage);
+      if (STAGE_ORDER.includes(newStage) && lead) {
+        // Update lead stage first
+        await updateLeadStage(leadId, newStage);
+        
+        // Check if moving to CERRADO_GANADO and needs MRR registration
+        if (newStage === 'CERRADO_GANADO') {
+          const leadDeals = dealsMap[leadId] || [];
+          if (needsMrrRegistration(leadDeals)) {
+            setPendingLeadForDeal(lead);
+            setDealModalOpen(true);
+          }
+        }
       }
     }
     
     setActiveId(null);
+  };
+
+  const handleSaveDeal = async (dealData: any) => {
+    if (!pendingLeadForDeal) return;
+    
+    await upsertDeal({
+      leadId: pendingLeadForDeal.id,
+      dealData,
+    });
+    
+    setDealModalOpen(false);
+    setPendingLeadForDeal(null);
+  };
+
+  const handleCloseDealModal = () => {
+    setDealModalOpen(false);
+    setPendingLeadForDeal(null);
   };
 
   const activeLead = activeId ? leads.find(lead => lead.id === activeId) : null;
@@ -114,6 +148,7 @@ export default function Funnel() {
                 title={STAGE_LABELS[stage]}
                 leads={leadsByStage[stage] || []}
                 count={leadsByStage[stage]?.length || 0}
+                dealsMap={dealsMap}
               />
             </SortableContext>
           ))}
@@ -123,6 +158,14 @@ export default function Funnel() {
           {activeLead ? <LeadCard lead={activeLead} isDragging /> : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Deal Registration Modal */}
+      <DealModal
+        open={dealModalOpen}
+        onClose={handleCloseDealModal}
+        onSave={handleSaveDeal}
+        leadCompanyName={pendingLeadForDeal?.company_name}
+      />
     </div>
   );
 }

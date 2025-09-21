@@ -8,6 +8,7 @@ import Funnel from "./pages/Funnel";
 import Leads from "./pages/Leads";
 import Dashboard from "./pages/Dashboard";
 import Goals from "./pages/Goals";
+import LeadDetail from "./pages/LeadDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Funnel />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/leads/:id" element={<LeadDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="*" element={<NotFound />} />

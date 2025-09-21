@@ -10,16 +10,19 @@ import { formatDistanceToBogota } from '@/lib/date-utils';
 import { Building, User, Phone, Mail, MessageSquare, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useLeads } from '@/hooks/useLeads';
+import { useDeals } from '@/hooks/useDeals';
 
 interface LeadCardProps {
   lead: Lead;
   isDragging?: boolean;
+  deals?: any[];
 }
 
-export function LeadCard({ lead, isDragging = false }: LeadCardProps) {
+export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps) {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState('');
   const { addNote } = useLeads();
+  const { getMrrBadgeInfo } = useDeals();
   
   const {
     attributes,
@@ -95,6 +98,23 @@ export function LeadCard({ lead, isDragging = false }: LeadCardProps) {
               </Badge>
             )}
           </div>
+
+          {/* MRR Badge for CERRADO_GANADO */}
+          {lead.stage === 'CERRADO_GANADO' && (
+            <div className="flex flex-wrap gap-1">
+              {(() => {
+                const badgeInfo = getMrrBadgeInfo(deals);
+                return (
+                  <Badge 
+                    variant={badgeInfo.type === 'active' ? 'default' : 'destructive'} 
+                    className="text-xs"
+                  >
+                    {badgeInfo.text}
+                  </Badge>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Información de contacto */}
           <div className="space-y-1">

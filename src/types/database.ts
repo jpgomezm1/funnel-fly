@@ -71,6 +71,30 @@ export const SUBCHANNEL_LABELS: Record<LeadSubchannel, string> = {
   'OTRO': 'Otro'
 };
 
+export type DealStatus = 
+  | 'ACTIVE'
+  | 'CHURNED'
+  | 'ON_HOLD';
+
+export interface Deal {
+  id: string;
+  lead_id: string;
+  mrr_usd: number;
+  implementation_fee_usd: number;
+  start_date: string;
+  status: DealStatus;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const DEAL_STATUS_LABELS: Record<DealStatus, string> = {
+  'ACTIVE': 'Activo',
+  'CHURNED': 'Churned',
+  'ON_HOLD': 'En Pausa'
+};
+
 export const STAGE_ORDER: LeadStage[] = [
   'PROSPECTO',
   'CONTACTADO', 
