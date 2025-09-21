@@ -63,6 +63,31 @@ export default function LeadDetail() {
     }
   }, [lead]);
 
+  const handleNotesBlur = useCallback(async () => {
+    if (!id || !lead || notesValue === (lead?.notes || '')) return;
+    
+    setSavingNotes(true);
+    try {
+      // Update notes in database
+      const { error } = await supabase
+        .from('leads')
+        .update({ notes: notesValue.trim() || null })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead', { id }] });
+      refreshTimeline();
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('Error al guardar las notas');
+    } finally {
+      setSavingNotes(false);
+    }
+  }, [id, notesValue, lead?.notes, queryClient, refreshTimeline]);
+
   if (!lead) {
     return (
       <div className="container mx-auto py-8">
@@ -118,30 +143,7 @@ export default function LeadDetail() {
     }
   };
 
-  const handleNotesBlur = useCallback(async () => {
-    if (!id || notesValue === (lead?.notes || '')) return;
-    
-    setSavingNotes(true);
-    try {
-      // Update notes in database
-      const { error } = await supabase
-        .from('leads')
-        .update({ notes: notesValue.trim() || null })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['lead', { id }] });
-      refreshTimeline();
-    } catch (error) {
-      console.error('Error saving notes:', error);
-      alert('Error al guardar las notas');
-    } finally {
-      setSavingNotes(false);
-    }
-  }, [id, notesValue, lead?.notes, queryClient, refreshTimeline]);
+  // This hook was moved above the conditional return
 
   return (
     <div className="container mx-auto py-8 space-y-6">
