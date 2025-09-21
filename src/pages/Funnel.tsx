@@ -19,6 +19,7 @@ import { LeadCard } from '@/components/leads/LeadCard';
 import { FunnelColumn } from '@/components/leads/FunnelColumn';
 import { FunnelFilters } from '@/components/leads/FunnelFilters';
 import { DealModal } from '@/components/deals/DealModal';
+import { LeadCreateModal } from '@/components/leads/LeadCreateModal';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals, useLeadDeals } from '@/hooks/useDeals';
 import { Lead, LeadStage, STAGE_ORDER, STAGE_LABELS } from '@/types/database';
@@ -27,11 +28,12 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Filter, TrendingUp, Users, Target } from 'lucide-react';
 
 export default function Funnel() {
-  const { leads, loading, updateLeadStage } = useLeads();
+  const { leads, loading, updateLeadStage, createLead } = useLeads();
   const { needsMrrRegistration, upsertDeal } = useDeals();
   const { dealsMap } = useLeadDeals(leads.map(lead => lead.id));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dealModalOpen, setDealModalOpen] = useState(false);
+  const [createLeadModalOpen, setCreateLeadModalOpen] = useState(false);
   const [pendingLeadForDeal, setPendingLeadForDeal] = useState<Lead | null>(null);
   const [filters, setFilters] = useState({
     dateRange: null as { from: Date; to: Date } | null,
@@ -116,6 +118,15 @@ export default function Funnel() {
     setPendingLeadForDeal(null);
   };
 
+  const handleCreateLead = async (leadData: any) => {
+    try {
+      await createLead(leadData);
+      setCreateLeadModalOpen(false);
+    } catch (error) {
+      console.error('Error creating lead:', error);
+    }
+  };
+
   const activeLead = activeId ? leads.find(lead => lead.id === activeId) : null;
 
   if (loading) {
@@ -146,7 +157,11 @@ export default function Funnel() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button className="gap-2" size="lg">
+            <Button 
+              className="gap-2" 
+              size="lg"
+              onClick={() => setCreateLeadModalOpen(true)}
+            >
               <Plus className="h-4 w-4" />
               Nuevo Lead
             </Button>
@@ -235,6 +250,13 @@ export default function Funnel() {
         onClose={handleCloseDealModal}
         onSave={handleSaveDeal}
         leadCompanyName={pendingLeadForDeal?.company_name}
+      />
+
+      {/* Lead Creation Modal */}
+      <LeadCreateModal
+        open={createLeadModalOpen}
+        onClose={() => setCreateLeadModalOpen(false)}
+        onSave={handleCreateLead}
       />
     </div>
   );

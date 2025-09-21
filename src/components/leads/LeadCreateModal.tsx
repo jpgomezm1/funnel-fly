@@ -1,0 +1,343 @@
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LeadChannel, LeadSubchannel, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
+import { Building, User, Phone, Mail, Activity, Target, Save, X, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// Comerciales disponibles
+const COMERCIALES = {
+  'juan_pablo_gomez': 'Juan Pablo Gomez',
+  'agustin_hoyos': 'Agustin Hoyos',
+  'sara_garces': 'Sara Garces',
+  'pamela_puello': 'Pamela Puello'
+} as const;
+
+interface LeadCreateModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (leadData: {
+    company_name: string;
+    contact_name?: string;
+    contact_role?: string;
+    phone?: string;
+    email?: string;
+    channel?: LeadChannel;
+    subchannel?: LeadSubchannel;
+    owner_id?: string;
+  }) => Promise<void>;
+}
+
+export function LeadCreateModal({ open, onClose, onSave }: LeadCreateModalProps) {
+  const [formData, setFormData] = useState({
+    company_name: '',
+    contact_name: '',
+    contact_role: '',
+    phone: '',
+    email: '',
+    channel: 'OUTBOUND_APOLLO' as LeadChannel,
+    subchannel: 'NINGUNO' as LeadSubchannel,
+    owner_id: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const resetForm = () => {
+    setFormData({
+      company_name: '',
+      contact_name: '',
+      contact_role: '',
+      phone: '',
+      email: '',
+      channel: 'OUTBOUND_APOLLO',
+      subchannel: 'NINGUNO',
+      owner_id: '',
+    });
+  };
+
+  const handleSave = async () => {
+    if (!formData.company_name?.trim()) {
+      alert('El nombre de la empresa es requerido');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onSave({
+        company_name: formData.company_name.trim(),
+        contact_name: formData.contact_name?.trim() || undefined,
+        contact_role: formData.contact_role?.trim() || undefined,
+        phone: formData.phone?.trim() || undefined,
+        email: formData.email?.trim() || undefined,
+        channel: formData.channel,
+        subchannel: formData.subchannel,
+        owner_id: formData.owner_id || undefined,
+      });
+      resetForm();
+      onClose();
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      alert('Error al crear el lead');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-white to-slate-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/50 border-0 shadow-2xl backdrop-blur-xl">
+        <DialogHeader className="space-y-6 pb-8 border-b border-slate-200 dark:border-slate-700">
+          <div className="relative">
+            {/* Background decoration */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-blue-500/5 to-purple-500/5 rounded-2xl" />
+            <div className="absolute top-2 right-2 w-20 h-20 bg-gradient-to-br from-primary/10 to-blue-500/10 rounded-full blur-2xl animate-pulse" />
+
+            <div className="relative flex items-center gap-6 p-6 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-700 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-lg">
+              <div className="relative p-4 bg-gradient-to-br from-green-500/20 to-green-600/30 rounded-2xl shadow-xl border border-green-500/20">
+                <Building className="h-8 w-8 text-green-600" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full" />
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">
+                  Crear Nuevo Lead
+                </DialogTitle>
+                <p className="text-slate-600 dark:text-slate-300 font-semibold text-lg mt-1">Agregar nueva oportunidad de negocio</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm text-green-600 dark:text-green-400 font-medium">Creando nuevo lead</span>
+                </div>
+              </div>
+              <Sparkles className="h-8 w-8 text-green-600 animate-pulse" />
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-8 py-8">
+          {/* Company Information Section */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="p-3 bg-gradient-to-br from-primary/20 to-blue-500/30 rounded-xl shadow-lg">
+                <Building className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white">Información de la Empresa</h3>
+            </div>
+
+            <div className="p-6 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-700/30 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg">
+              <div className="space-y-4">
+                <Label htmlFor="company_name" className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 uppercase tracking-wider">
+                  <Building className="h-4 w-4 text-primary" />
+                  Empresa *
+                </Label>
+                <Input
+                  id="company_name"
+                  value={formData.company_name}
+                  onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                  className={cn(
+                    "h-14 bg-white/70 dark:bg-slate-800/70 border-2 transition-all duration-200 rounded-xl text-lg font-medium shadow-lg",
+                    "focus:border-primary/50 focus:bg-white dark:focus:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600",
+                    "border-slate-300 dark:border-slate-600"
+                  )}
+                  placeholder="Nombre de la empresa"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information Section */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="p-3 bg-gradient-to-br from-blue-500/20 to-blue-600/30 rounded-xl shadow-lg">
+                <User className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white">Información de Contacto</h3>
+            </div>
+
+            <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100/70 dark:from-blue-900/30 dark:to-blue-950/20 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-lg">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Label htmlFor="contact_name" className="text-sm font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 uppercase tracking-wider">
+                    <User className="h-4 w-4" />
+                    Contacto
+                  </Label>
+                  <Input
+                    id="contact_name"
+                    value={formData.contact_name}
+                    onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+                    className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-blue-200 dark:border-blue-700 transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-600 rounded-xl text-lg font-medium shadow-lg"
+                    placeholder="Nombre del contacto"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <Label htmlFor="contact_role" className="text-sm font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Target className="h-4 w-4" />
+                    Cargo
+                  </Label>
+                  <Input
+                    id="contact_role"
+                    value={formData.contact_role}
+                    onChange={(e) => setFormData({ ...formData, contact_role: e.target.value })}
+                    className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-blue-200 dark:border-blue-700 transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-600 rounded-xl text-lg font-medium shadow-lg"
+                    placeholder="Cargo del contacto"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6 mt-6">
+                <div className="space-y-4">
+                  <Label htmlFor="phone" className="text-sm font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Phone className="h-4 w-4" />
+                    Teléfono
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-blue-200 dark:border-blue-700 transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-600 rounded-xl text-lg font-medium shadow-lg"
+                    placeholder="Número de teléfono"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <Label htmlFor="email" className="text-sm font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-blue-200 dark:border-blue-700 transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-600 rounded-xl text-lg font-medium shadow-lg"
+                    placeholder="Correo electrónico"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment and Channel Section */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/30 rounded-xl shadow-lg">
+                <Activity className="h-6 w-6 text-purple-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white">Asignación y Canal</h3>
+            </div>
+
+            <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/30 dark:to-purple-950/20 rounded-2xl border border-purple-200 dark:border-purple-800 shadow-lg">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
+                    <User className="h-4 w-4" />
+                    Comercial
+                  </Label>
+                  <Select
+                    value={formData.owner_id || 'unassigned'}
+                    onValueChange={(value: string) => setFormData({ ...formData, owner_id: value === 'unassigned' ? '' : value })}
+                  >
+                    <SelectTrigger className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-purple-200 dark:border-purple-700 transition-all duration-200 hover:border-purple-300 dark:hover:border-purple-600 rounded-xl shadow-lg">
+                      <SelectValue placeholder="Seleccionar comercial" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-purple-200 dark:border-purple-700 rounded-xl shadow-2xl">
+                      <SelectItem value="unassigned" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                        Sin asignar
+                      </SelectItem>
+                      {Object.entries(COMERCIALES).map(([key, label]) => (
+                        <SelectItem key={key} value={key} className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Activity className="h-4 w-4" />
+                    Canal
+                  </Label>
+                  <Select
+                    value={formData.channel}
+                    onValueChange={(value: LeadChannel) => setFormData({ ...formData, channel: value })}
+                  >
+                    <SelectTrigger className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-purple-200 dark:border-purple-700 transition-all duration-200 hover:border-purple-300 dark:hover:border-purple-600 rounded-xl shadow-lg">
+                      <SelectValue placeholder="Seleccionar canal" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-purple-200 dark:border-purple-700 rounded-xl shadow-2xl">
+                      {Object.entries(CHANNEL_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key} className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Target className="h-4 w-4" />
+                    Subcanal
+                  </Label>
+                  <Select
+                    value={formData.subchannel}
+                    onValueChange={(value: LeadSubchannel) => setFormData({ ...formData, subchannel: value })}
+                  >
+                    <SelectTrigger className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-purple-200 dark:border-purple-700 transition-all duration-200 hover:border-purple-300 dark:hover:border-purple-600 rounded-xl shadow-lg">
+                      <SelectValue placeholder="Seleccionar subcanal" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-purple-200 dark:border-purple-700 rounded-xl shadow-2xl">
+                      {Object.entries(SUBCHANNEL_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key} className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-4 pt-8 border-t border-slate-200 dark:border-slate-700">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={loading}
+            className="h-14 px-8 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 transition-all duration-200 rounded-xl shadow-lg hover:shadow-xl font-semibold"
+          >
+            <X className="h-5 w-5 mr-3" />
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={loading || !formData.company_name?.trim()}
+            className="h-14 px-8 bg-gradient-to-r from-green-600 via-green-600 to-green-700 hover:from-green-500 hover:via-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl border border-green-600/20 font-semibold"
+          >
+            {loading ? (
+              <>
+                <div className="h-5 w-5 mr-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Creando...
+              </>
+            ) : (
+              <>
+                <Save className="h-5 w-5 mr-3" />
+                Crear Lead
+                <Sparkles className="h-5 w-5 ml-3" />
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
