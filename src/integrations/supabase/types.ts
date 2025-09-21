@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      deals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          implementation_fee_usd: number
+          lead_id: string
+          mrr_usd: number
+          notes: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["deal_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          implementation_fee_usd?: number
+          lead_id: string
+          mrr_usd: number
+          notes?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["deal_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          implementation_fee_usd?: number
+          lead_id?: string
+          mrr_usd?: number
+          notes?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["deal_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          created_at: string
+          effective_from: string
+          goal_type: string
+          id: string
+          period: string
+          value_usd: number
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          goal_type: string
+          id?: string
+          period: string
+          value_usd: number
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          goal_type?: string
+          id?: string
+          period?: string
+          value_usd?: number
+        }
+        Relationships: []
+      }
       lead_stage_history: {
         Row: {
           changed_at: string
@@ -114,6 +188,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      deal_status: "ACTIVE" | "CHURNED" | "ON_HOLD"
       lead_channel: "OUTBOUND_APOLLO" | "WARM_INTRO" | "INBOUND_REDES"
       lead_stage:
         | "PROSPECTO"
@@ -251,6 +326,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      deal_status: ["ACTIVE", "CHURNED", "ON_HOLD"],
       lead_channel: ["OUTBOUND_APOLLO", "WARM_INTRO", "INBOUND_REDES"],
       lead_stage: [
         "PROSPECTO",
