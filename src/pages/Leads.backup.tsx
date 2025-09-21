@@ -16,15 +16,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useLeads } from '@/hooks/useLeads';
-import {
-  Lead,
-  LeadChannel,
-  LeadSubchannel,
+import { 
+  Lead, 
+  LeadChannel, 
+  LeadSubchannel, 
   LeadStage,
-  STAGE_LABELS,
-  CHANNEL_LABELS,
-  SUBCHANNEL_LABELS,
-  STAGE_ORDER
+  STAGE_LABELS, 
+  CHANNEL_LABELS, 
+  SUBCHANNEL_LABELS, 
+  STAGE_ORDER 
 } from '@/types/database';
 import { formatDateToBogota, formatDistanceToBogota } from '@/lib/date-utils';
 import {
@@ -67,20 +67,20 @@ export default function Leads() {
 
   // Filtrar leads
   const filteredLeads = leads.filter((lead) => {
-    const searchMatch =
+    const searchMatch = 
       lead.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
-
+    
     const stageMatch = !stageFilter || stageFilter === 'all' || lead.stage === stageFilter;
     const channelMatch = !channelFilter || channelFilter === 'all' || lead.channel === channelFilter;
-
+    
     return searchMatch && stageMatch && channelMatch;
   });
 
   const handleCreateLead = async () => {
     if (!newLead.company_name.trim()) return;
-
+    
     try {
       await createLead(newLead);
       setNewLead({
@@ -169,128 +169,127 @@ export default function Leads() {
                   Nuevo Lead
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Lead</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="company_name">Empresa *</Label>
-                    <Input
-                      id="company_name"
-                      placeholder="Nombre de la empresa"
-                      value={newLead.company_name}
-                      onChange={(e) => setNewLead({...newLead, company_name: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="contact_name">Contacto</Label>
-                    <Input
-                      id="contact_name"
-                      placeholder="Nombre del contacto"
-                      value={newLead.contact_name}
-                      onChange={(e) => setNewLead({...newLead, contact_name: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="contact_role">Cargo</Label>
-                    <Input
-                      id="contact_role"
-                      placeholder="Cargo del contacto"
-                      value={newLead.contact_role}
-                      onChange={(e) => setNewLead({...newLead, contact_role: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Teléfono</Label>
-                    <Input
-                      id="phone"
-                      placeholder="+57 300 123 4567"
-                      value={newLead.phone}
-                      onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="contacto@empresa.com"
-                      value={newLead.email}
-                      onChange={(e) => setNewLead({...newLead, email: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="channel">Canal *</Label>
-                    <Select
-                      value={newLead.channel}
-                      onValueChange={(value) => setNewLead({...newLead, channel: value as LeadChannel})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="subchannel">Subcanal</Label>
-                    <Select
-                      value={newLead.subchannel}
-                      onValueChange={(value) => setNewLead({...newLead, subchannel: value as LeadSubchannel})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(SUBCHANNEL_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="owner_id">Comercial</Label>
-                    <Input
-                      id="owner_id"
-                      placeholder="Nombre del comercial (opcional)"
-                      value={newLead.owner_id}
-                      onChange={(e) => setNewLead({...newLead, owner_id: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCreateDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleCreateLead}
-                    disabled={!newLead.company_name.trim()}
-                  >
-                    Crear Lead
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Crear Nuevo Lead</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="company_name">Empresa *</Label>
+                <Input
+                  id="company_name"
+                  placeholder="Nombre de la empresa"
+                  value={newLead.company_name}
+                  onChange={(e) => setNewLead({...newLead, company_name: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Contacto</Label>
+                <Input
+                  id="contact_name"
+                  placeholder="Nombre del contacto"
+                  value={newLead.contact_name}
+                  onChange={(e) => setNewLead({...newLead, contact_name: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="contact_role">Cargo</Label>
+                <Input
+                  id="contact_role"
+                  placeholder="Cargo del contacto"
+                  value={newLead.contact_role}
+                  onChange={(e) => setNewLead({...newLead, contact_role: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input
+                  id="phone"
+                  placeholder="+57 300 123 4567"
+                  value={newLead.phone}
+                  onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="contacto@empresa.com"
+                  value={newLead.email}
+                  onChange={(e) => setNewLead({...newLead, email: e.target.value})}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="channel">Canal *</Label>
+                <Select 
+                  value={newLead.channel} 
+                  onValueChange={(value) => setNewLead({...newLead, channel: value as LeadChannel})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="subchannel">Subcanal</Label>
+                <Select 
+                  value={newLead.subchannel} 
+                  onValueChange={(value) => setNewLead({...newLead, subchannel: value as LeadSubchannel})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(SUBCHANNEL_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="owner_id">Comercial</Label>
+                <Input
+                  id="owner_id"
+                  placeholder="Nombre del comercial (opcional)"
+                  value={newLead.owner_id}
+                  onChange={(e) => setNewLead({...newLead, owner_id: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCreateLead}
+                disabled={!newLead.company_name.trim()}
+              >
+                Crear Lead
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         </div>
 
         {/* Métricas Dashboard */}
@@ -505,7 +504,7 @@ export default function Leads() {
                     </div>
                   </div>
                 </TableCell>
-
+                
                 <TableCell className="py-4">
                   {lead.contact_name ? (
                     <div className="space-y-1">
@@ -536,7 +535,7 @@ export default function Leads() {
                     </div>
                   )}
                 </TableCell>
-
+                
                 <TableCell className="py-4">
                   <div className="space-y-2">
                     <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 font-medium">
@@ -549,7 +548,7 @@ export default function Leads() {
                     )}
                   </div>
                 </TableCell>
-
+                
                 <TableCell className="py-4">
                   <Select
                     value={lead.stage}

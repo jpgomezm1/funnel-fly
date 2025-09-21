@@ -22,6 +22,9 @@ import { DealModal } from '@/components/deals/DealModal';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals, useLeadDeals } from '@/hooks/useDeals';
 import { Lead, LeadStage, STAGE_ORDER, STAGE_LABELS } from '@/types/database';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Filter, TrendingUp, Users, Target } from 'lucide-react';
 
 export default function Funnel() {
   const { leads, loading, updateLeadStage } = useLeads();
@@ -124,10 +127,77 @@ export default function Funnel() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-foreground">Funnel Comercial</h1>
-        <FunnelFilters filters={filters} onFiltersChange={setFilters} />
+    <div className="space-y-8">
+      {/* Header mejorado */}
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Target className="h-6 w-6 text-primary" />
+              </div>
+              <h1 className="text-4xl font-bold text-foreground bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                Funnel Comercial
+              </h1>
+            </div>
+            <p className="text-muted-foreground text-lg">
+              Gestiona y monitorea el progreso de tus leads a través del proceso de ventas
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button className="gap-2" size="lg">
+              <Plus className="h-4 w-4" />
+              Nuevo Lead
+            </Button>
+            <FunnelFilters filters={filters} onFiltersChange={setFilters} />
+          </div>
+        </div>
+
+        {/* Métricas rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-950/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Leads</p>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{filteredLeads.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-950/30 p-4 rounded-xl border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Cerrados Ganados</p>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                  {leadsByStage['CERRADO_GANADO']?.length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-950/30 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <Target className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Tasa Conversión</p>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                  {filteredLeads.length > 0
+                    ? Math.round(((leadsByStage['CERRADO_GANADO']?.length || 0) / filteredLeads.length) * 100)
+                    : 0}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <DndContext
@@ -136,7 +206,7 @@ export default function Funnel() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4 overflow-x-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 auto-rows-fr">
           {STAGE_ORDER.map((stage) => (
             <SortableContext
               key={stage}

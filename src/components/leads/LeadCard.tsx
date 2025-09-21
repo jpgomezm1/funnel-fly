@@ -7,10 +7,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { Lead, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
 import { formatDistanceToBogota } from '@/lib/date-utils';
-import { Building, User, Phone, Mail, MessageSquare, Plus } from 'lucide-react';
+import {
+  Building,
+  User,
+  Phone,
+  Mail,
+  MessageSquare,
+  Plus,
+  Calendar,
+  DollarSign,
+  Sparkles,
+  ExternalLink
+} from 'lucide-react';
 import { useState } from 'react';
 import { useLeads } from '@/hooks/useLeads';
 import { useDeals } from '@/hooks/useDeals';
+import { cn } from '@/lib/utils';
 
 interface LeadCardProps {
   lead: Lead;
@@ -47,12 +59,15 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
 
   if (isDragging) {
     return (
-      <Card className="w-72 bg-background border-2 border-dashed border-primary/50 rotate-3 shadow-lg">
+      <Card className="w-80 bg-gradient-to-br from-primary/10 to-primary/20 border-2 border-dashed border-primary/60 rotate-2 shadow-xl backdrop-blur-sm">
         <CardContent className="p-4">
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Building className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">{lead.company_name}</span>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/20 rounded-lg">
+                <Building className="h-4 w-4 text-primary" />
+              </div>
+              <span className="font-semibold text-sm text-primary">{lead.company_name}</span>
+              <Sparkles className="h-4 w-4 text-primary ml-auto animate-pulse" />
             </div>
           </div>
         </CardContent>
@@ -66,34 +81,58 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
       style={style}
       {...attributes}
       {...listeners}
-      className="w-full bg-card hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+      className={cn(
+        "w-full group relative overflow-hidden transition-all duration-300 cursor-grab active:cursor-grabbing",
+        "bg-gradient-to-br from-card via-card to-card/95",
+        "border border-border/50 hover:border-primary/30",
+        "hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1",
+        "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-primary/5 before:to-transparent",
+        "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+      )}
     >
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Empresa */}
-          <div className="flex items-center gap-2">
-            <Building className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm truncate">{lead.company_name}</span>
+      <CardContent className="p-4 relative z-10">
+        <div className="space-y-4">
+          {/* Header con empresa y acciones */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="p-2 bg-primary/10 rounded-lg shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Building className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                  {lead.company_name}
+                </h4>
+                {lead.contact_name && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                    <User className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{lead.contact_name}</span>
+                    {lead.contact_role && (
+                      <span className="text-xs opacity-70">• {lead.contact_role}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Aquí puedes agregar navegación al detalle del lead
+              }}
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Button>
           </div>
 
-          {/* Contacto */}
-          {lead.contact_name && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3 w-3" />
-              <span className="truncate">{lead.contact_name}</span>
-              {lead.contact_role && (
-                <span className="text-xs">({lead.contact_role})</span>
-              )}
-            </div>
-          )}
-
           {/* Canal y Subcanal */}
-          <div className="flex flex-wrap gap-1">
-            <Badge variant="secondary" className="text-xs">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="text-xs font-medium bg-secondary/60 hover:bg-secondary">
               {CHANNEL_LABELS[lead.channel]}
             </Badge>
             {lead.subchannel !== 'NINGUNO' && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs bg-background/50 border-primary/20">
                 {SUBCHANNEL_LABELS[lead.subchannel]}
               </Badge>
             )}
@@ -101,14 +140,20 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
 
           {/* MRR Badge for CERRADO_GANADO */}
           {lead.stage === 'CERRADO_GANADO' && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2">
               {(() => {
                 const badgeInfo = getMrrBadgeInfo(deals);
                 return (
-                  <Badge 
-                    variant={badgeInfo.type === 'active' ? 'default' : 'destructive'} 
-                    className="text-xs"
+                  <Badge
+                    variant={badgeInfo.type === 'active' ? 'default' : 'destructive'}
+                    className={cn(
+                      "text-xs font-semibold",
+                      badgeInfo.type === 'active'
+                        ? "bg-green-500 hover:bg-green-600 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    )}
                   >
+                    <DollarSign className="h-3 w-3 mr-1" />
                     {badgeInfo.text}
                   </Badge>
                 );
@@ -117,43 +162,55 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
           )}
 
           {/* Información de contacto */}
-          <div className="space-y-1">
-            {lead.phone && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Phone className="h-3 w-3" />
-                <span className="truncate">{lead.phone}</span>
-              </div>
-            )}
-            {lead.email && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Mail className="h-3 w-3" />
-                <span className="truncate">{lead.email}</span>
-              </div>
-            )}
-          </div>
+          {(lead.phone || lead.email) && (
+            <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/30">
+              {lead.phone && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Phone className="h-3 w-3 text-primary" />
+                  <span className="truncate font-medium">{lead.phone}</span>
+                </div>
+              )}
+              {lead.email && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3 text-primary" />
+                  <span className="truncate font-medium">{lead.email}</span>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Owner y última actividad */}
-          <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <span>
-              {lead.owner_id ? `Owner: ${lead.owner_id.slice(0, 8)}...` : 'Sin asignar'}
-            </span>
-            <span className="truncate">
-              {formatDistanceToBogota(lead.last_activity_at)}
-            </span>
+          {/* Footer con metadata */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
+            <div className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              <span className="truncate">
+                {lead.owner_id ? `${lead.owner_id.slice(0, 8)}...` : 'Sin asignar'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              <span className="truncate">
+                {formatDistanceToBogota(lead.last_activity_at)}
+              </span>
+            </div>
           </div>
 
           {/* Botón agregar nota */}
           <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
             <DialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full gap-2 h-8"
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-full gap-2 h-9 bg-background/50 border-dashed border-primary/30",
+                  "hover:bg-primary/5 hover:border-primary/50 transition-all duration-200",
+                  "text-muted-foreground hover:text-primary"
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 <Plus className="h-3 w-3" />
                 <MessageSquare className="h-3 w-3" />
-                Nota
+                Agregar Nota
               </Button>
             </DialogTrigger>
             <DialogContent onClick={(e) => e.stopPropagation()}>
