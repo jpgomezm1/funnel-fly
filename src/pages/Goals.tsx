@@ -505,59 +505,14 @@ export default function Goals() {
                     Metas Mensuales
                   </TabsTrigger>
                 </TabsList>
-
-                <div className="flex items-center gap-3">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
-                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                    Modo Campeón Activado
-                  </span>
-                </div>
               </div>
 
               <TabsContent value="weekly" className="space-y-8">
-                {/* Weekly Motivation Banner */}
-                <div className="relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-blue-500/10 to-cyan-500/5 rounded-2xl" />
-                  <Card className={cn(
-                    "overflow-hidden border-0 shadow-xl transition-all duration-500",
-                    `bg-gradient-to-r ${weeklyMotivation.bg}`
-                  )}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-center gap-4 text-center">
-                        <Rocket className="h-8 w-8 text-white animate-bounce" />
-                        <h2 className="text-2xl lg:text-3xl font-black text-white">
-                          {weeklyMotivation.text}
-                        </h2>
-                        <Sparkles className="h-8 w-8 text-white animate-pulse" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
                 {renderSummaryCards(weeklyGoals, 'weekly')}
                 {renderGoalsTable(weeklyGoals, 'weekly')}
               </TabsContent>
 
               <TabsContent value="monthly" className="space-y-8">
-                {/* Monthly Motivation Banner */}
-                <div className="relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-green-500/10 to-emerald-500/5 rounded-2xl" />
-                  <Card className={cn(
-                    "overflow-hidden border-0 shadow-xl transition-all duration-500",
-                    `bg-gradient-to-r ${monthlyMotivation.bg}`
-                  )}>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-center gap-4 text-center">
-                        <Trophy className="h-8 w-8 text-white animate-bounce" />
-                        <h2 className="text-2xl lg:text-3xl font-black text-white">
-                          {monthlyMotivation.text}
-                        </h2>
-                        <Crown className="h-8 w-8 text-white animate-pulse" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
                 {renderSummaryCards(monthlyGoals, 'monthly')}
                 {renderGoalsTable(monthlyGoals, 'monthly')}
               </TabsContent>
