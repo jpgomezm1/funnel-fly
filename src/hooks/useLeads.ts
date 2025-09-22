@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, LeadStage, LeadStageHistory } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
+import { useEmailNotifications } from './useEmailNotifications';
 
 export const useLeads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { notifyNewLead, notifyStageChange } = useEmailNotifications();
 
   const fetchLeads = async () => {
     try {
@@ -33,6 +35,10 @@ export const useLeads = () => {
 
   const updateLeadStage = async (leadId: string, newStage: LeadStage) => {
     try {
+      // Encontrar el lead actual para obtener la etapa anterior
+      const currentLead = leads.find(lead => lead.id === leadId);
+      const previousStage = currentLead?.stage;
+
       const { error } = await supabase
         .from('leads')
         .update({ 
@@ -44,18 +50,28 @@ export const useLeads = () => {
       if (error) throw error;
 
       // Actualizar el estado local
+      const updatedLead = {
+        ...currentLead!,
+        stage: newStage, 
+        stage_entered_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString()
+      };
+
       setLeads(prevLeads => 
         prevLeads.map(lead => 
-          lead.id === leadId 
-            ? { 
-                ...lead, 
-                stage: newStage, 
-                stage_entered_at: new Date().toISOString(),
-                last_activity_at: new Date().toISOString()
-              }
-            : lead
+          lead.id === leadId ? updatedLead : lead
         )
       );
+
+      // Enviar notificación de email si cambió de etapa
+      if (previousStage && previousStage !== newStage) {
+        try {
+          await notifyStageChange(updatedLead, previousStage, newStage);
+        } catch (emailError) {
+          console.error('Error sending stage change notification:', emailError);
+          // No mostrar error al usuario, es solo una notificación
+        }
+      }
 
       toast({
         title: 'Éxito',
@@ -99,6 +115,14 @@ export const useLeads = () => {
       }
 
       setLeads(prevLeads => [data, ...prevLeads]);
+      
+      // Enviar notificación de email para nuevo lead
+      try {
+        await notifyNewLead(data);
+      } catch (emailError) {
+        console.error('Error sending new lead notification:', emailError);
+        // No mostrar error al usuario, es solo una notificación
+      }
       
       toast({
         title: 'Éxito',
