@@ -33,6 +33,7 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
         channel: lead.channel,
         subchannel: lead.subchannel,
         owner_id: lead.owner_id || '',
+        product_tag: lead.product_tag || 'WhatsApp',
       });
     }
   }, [open, lead]);
@@ -199,7 +200,30 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
             </div>
 
             <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/30 dark:to-purple-950/20 rounded-2xl border border-purple-200 dark:border-purple-800 shadow-lg">
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Target className="h-4 w-4" />
+                    Producto
+                  </Label>
+                  <Select
+                    value={formData.product_tag || 'WhatsApp'}
+                    onValueChange={(value: string) => setFormData({ ...formData, product_tag: value })}
+                  >
+                    <SelectTrigger className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-purple-200 dark:border-purple-700 transition-all duration-200 hover:border-purple-300 dark:hover:border-purple-600 rounded-xl shadow-lg">
+                      <SelectValue placeholder="Seleccionar producto" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-purple-200 dark:border-purple-700 rounded-xl shadow-2xl">
+                      <SelectItem value="WhatsApp" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                        WhatsApp
+                      </SelectItem>
+                      <SelectItem value="Otro Desarrollo" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                        Otro Desarrollo
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-4">
                   <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
                     <User className="h-4 w-4" />
@@ -224,7 +248,9 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
                     <Activity className="h-4 w-4" />

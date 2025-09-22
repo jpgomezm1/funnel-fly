@@ -23,6 +23,7 @@ interface LeadCreateModalProps {
     channel?: LeadChannel;
     subchannel?: LeadSubchannel;
     owner_id?: string;
+    product_tag?: string;
   }) => Promise<void>;
 }
 
@@ -36,6 +37,7 @@ export function LeadCreateModal({ open, onClose, onSave }: LeadCreateModalProps)
     channel: 'OUTBOUND_APOLLO' as LeadChannel,
     subchannel: 'NINGUNO' as LeadSubchannel,
     owner_id: '',
+    product_tag: 'WhatsApp',
   });
   const [loading, setLoading] = useState(false);
 
@@ -49,6 +51,7 @@ export function LeadCreateModal({ open, onClose, onSave }: LeadCreateModalProps)
       channel: 'OUTBOUND_APOLLO',
       subchannel: 'NINGUNO',
       owner_id: '',
+      product_tag: 'WhatsApp',
     });
   };
 
@@ -69,6 +72,7 @@ export function LeadCreateModal({ open, onClose, onSave }: LeadCreateModalProps)
         channel: formData.channel,
         subchannel: formData.subchannel,
         owner_id: formData.owner_id || undefined,
+        product_tag: formData.product_tag,
       });
       resetForm();
       onClose();
@@ -229,7 +233,30 @@ export function LeadCreateModal({ open, onClose, onSave }: LeadCreateModalProps)
             </div>
 
             <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/70 dark:from-purple-900/30 dark:to-purple-950/20 rounded-2xl border border-purple-200 dark:border-purple-800 shadow-lg">
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
+                    <Target className="h-4 w-4" />
+                    Producto
+                  </Label>
+                  <Select
+                    value={formData.product_tag}
+                    onValueChange={(value: string) => setFormData({ ...formData, product_tag: value })}
+                  >
+                    <SelectTrigger className="h-14 bg-white/80 dark:bg-slate-800/50 border-2 border-purple-200 dark:border-purple-700 transition-all duration-200 hover:border-purple-300 dark:hover:border-purple-600 rounded-xl shadow-lg">
+                      <SelectValue placeholder="Seleccionar producto" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-purple-200 dark:border-purple-700 rounded-xl shadow-2xl">
+                      <SelectItem value="WhatsApp" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                        WhatsApp
+                      </SelectItem>
+                      <SelectItem value="Otro Desarrollo" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                        Otro Desarrollo
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-4">
                   <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
                     <User className="h-4 w-4" />
@@ -254,7 +281,9 @@ export function LeadCreateModal({ open, onClose, onSave }: LeadCreateModalProps)
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <Label className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-2 uppercase tracking-wider">
                     <Activity className="h-4 w-4" />

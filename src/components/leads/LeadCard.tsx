@@ -126,7 +126,7 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
             </Button>
           </div>
 
-          {/* Canal y Subcanal */}
+          {/* Canal, Subcanal y Tag de Producto */}
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="text-xs font-medium bg-secondary/60 hover:bg-secondary">
               {CHANNEL_LABELS[lead.channel]}
@@ -136,6 +136,12 @@ export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps
                 {SUBCHANNEL_LABELS[lead.subchannel]}
               </Badge>
             )}
+            <Badge 
+              variant="default" 
+              className="text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+            >
+              {lead.product_tag}
+            </Badge>
           </div>
 
           {/* MRR Badge for CERRADO_GANADO */}

@@ -170,6 +170,7 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          product_tag: string
           stage: Database["public"]["Enums"]["lead_stage"]
           stage_entered_at: string
           subchannel: Database["public"]["Enums"]["lead_subchannel"]
@@ -188,6 +189,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          product_tag?: string
           stage?: Database["public"]["Enums"]["lead_stage"]
           stage_entered_at?: string
           subchannel?: Database["public"]["Enums"]["lead_subchannel"]
@@ -206,6 +208,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          product_tag?: string
           stage?: Database["public"]["Enums"]["lead_stage"]
           stage_entered_at?: string
           subchannel?: Database["public"]["Enums"]["lead_subchannel"]

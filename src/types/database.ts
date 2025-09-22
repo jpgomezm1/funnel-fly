@@ -36,6 +36,7 @@ export interface Lead {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  product_tag: string;
 }
 
 export interface LeadStageHistory {
