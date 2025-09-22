@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   LineChart,
   Line,
@@ -22,13 +23,27 @@ import {
   Flame,
   Star,
   Rocket,
-  Crown
+  Crown,
+  Building,
+  User,
+  CheckCircle,
+  Eye,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { useMetrics } from '@/hooks/useMetrics';
-import { cn } from '@/lib/utils';
+import { useLeads } from '@/hooks/useLeads';
+import { useLeadDeals } from '@/hooks/useDeals';
+import { cn, formatOwnerName } from '@/lib/utils';
+import { formatDateToBogota } from '@/lib/date-utils';
+import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
   const { data: metrics, isLoading, error } = useMetrics();
+  const { leads } = useLeads();
+  
+  // Get closed leads
+  const closedLeads = leads.filter(lead => lead.stage === 'CERRADO_GANADO');
   const [animationStep, setAnimationStep] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
   const [sparkleCount, setSparkleCount] = useState(0);
@@ -425,7 +440,174 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Clientes Cerrados Section */}
+        <Card className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50/50 dark:from-emerald-900/30 dark:via-green-900/30 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800 shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-emerald-500/10 via-green-500/10 to-teal-500/5 p-8 border-b border-emerald-200 dark:border-emerald-700">
+            <CardTitle className="flex items-center gap-4 text-2xl">
+              <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-green-500/30 rounded-xl shadow-lg">
+                <CheckCircle className="h-6 w-6 text-emerald-600" />
+              </div>
+              <span className="bg-gradient-to-r from-emerald-800 to-green-600 dark:from-emerald-200 dark:to-green-200 bg-clip-text text-transparent font-bold">
+                Clientes Cerrados - ¡Victoria Total!
+              </span>
+              <Badge variant="outline" className="ml-auto bg-emerald-500/10 text-emerald-700 border-emerald-300">
+                {closedLeads.length} cliente{closedLeads.length !== 1 ? 's' : ''}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-8">
+            {closedLeads.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {closedLeads.map((lead) => (
+                    <ClosedLeadCard key={lead.id} lead={lead} />
+                  ))}
+                </div>
+                {closedLeads.length > 6 && (
+                  <div className="text-center">
+                    <Button asChild variant="outline" className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300">
+                      <Link to="/leads?stage=CERRADO_GANADO">
+                        Ver todos los clientes cerrados
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="p-6 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-2xl max-w-md mx-auto">
+                  <Trophy className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-300 mb-2">
+                    ¡Primer cierre en camino!
+                  </h3>
+                  <p className="text-emerald-600 dark:text-emerald-400">
+                    Los clientes cerrados aparecerán aquí cuando completes tu primer deal exitoso.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
+  );
+}
+
+// Component for individual closed lead cards
+function ClosedLeadCard({ lead }: { lead: any }) {
+  const { dealsMap } = useLeadDeals([lead.id]);
+  const deal = dealsMap[lead.id]?.[0]; // Get the first deal for this lead
+  
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  return (
+    <Card className="bg-white/80 dark:bg-slate-800/50 border-emerald-200 dark:border-emerald-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          {/* Company Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <Building className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight">
+                  {lead.company_name}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Cerrado: {formatDateToBogota(lead.stage_entered_at)}
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Ganado
+            </Badge>
+          </div>
+
+          {/* Deal Information */}
+          {deal && (
+            <div className="space-y-3 p-4 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">MRR</span>
+                <span className="font-bold text-emerald-800 dark:text-emerald-200">
+                  {formatCurrency(deal.mrr_usd)}/mes
+                </span>
+              </div>
+              {deal.implementation_fee_usd > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Implementation Fee</span>
+                  <span className="font-bold text-emerald-800 dark:text-emerald-200">
+                    {formatCurrency(deal.implementation_fee_usd)}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Inicio</span>
+                <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                  {new Date(deal.start_date).toLocaleDateString('es-CO')}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Contact Information */}
+          <div className="space-y-2">
+            {lead.contact_name && (
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600 dark:text-slate-300">{lead.contact_name}</span>
+                {lead.contact_role && (
+                  <span className="text-slate-500 dark:text-slate-400">- {lead.contact_role}</span>
+                )}
+              </div>
+            )}
+            {lead.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600 dark:text-slate-300 truncate">{lead.email}</span>
+              </div>
+            )}
+            {lead.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600 dark:text-slate-300">{lead.phone}</span>
+              </div>
+            )}
+            {lead.owner_id && (
+              <div className="flex items-center gap-2 text-sm">
+                <Target className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600 dark:text-slate-300">
+                  Owner: {formatOwnerName(lead.owner_id)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Action Button */}
+          <div className="pt-2">
+            <Button 
+              asChild 
+              variant="outline" 
+              size="sm" 
+              className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300"
+            >
+              <Link to={`/leads/${lead.id}`} className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Ver Detalles
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
