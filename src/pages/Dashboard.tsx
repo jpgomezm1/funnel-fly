@@ -29,7 +29,9 @@ import {
   CheckCircle,
   Eye,
   Mail,
-  Phone
+  Phone,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useLeads } from '@/hooks/useLeads';
@@ -41,6 +43,7 @@ import { Link } from 'react-router-dom';
 export default function Dashboard() {
   const { data: metrics, isLoading, error } = useMetrics();
   const { leads } = useLeads();
+  const [closedSectionExpanded, setClosedSectionExpanded] = useState(false);
   
   // Get closed leads
   const closedLeads = leads.filter(lead => lead.stage === 'CERRADO_GANADO');
@@ -441,63 +444,74 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Clientes Cerrados Section */}
-        <Card className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50/50 dark:from-emerald-900/30 dark:via-green-900/30 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800 shadow-2xl">
-          <CardHeader className="bg-gradient-to-r from-emerald-500/10 via-green-500/10 to-teal-500/5 p-8 border-b border-emerald-200 dark:border-emerald-700">
-            <CardTitle className="flex items-center gap-4 text-2xl">
-              <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-green-500/30 rounded-xl shadow-lg">
-                <CheckCircle className="h-6 w-6 text-emerald-600" />
+        {/* Clientes Cerrados Section - Compact & Collapsible */}
+        <Card className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50/50 dark:from-emerald-900/30 dark:via-green-900/30 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800 shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-emerald-500/10 via-green-500/10 to-teal-500/5 p-6 border-b border-emerald-200 dark:border-emerald-700">
+            <CardTitle 
+              className="flex items-center gap-4 text-xl cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 rounded-lg p-2 -m-2 transition-colors"
+              onClick={() => setClosedSectionExpanded(!closedSectionExpanded)}
+            >
+              <div className="p-2 bg-gradient-to-br from-emerald-500/20 to-green-500/30 rounded-lg shadow-lg">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
               </div>
-              <span className="bg-gradient-to-r from-emerald-800 to-green-600 dark:from-emerald-200 dark:to-green-200 bg-clip-text text-transparent font-bold">
-                Clientes Cerrados - ¡Victoria Total!
+              <span className="bg-gradient-to-r from-emerald-800 to-green-600 dark:from-emerald-200 dark:to-green-200 bg-clip-text text-transparent font-bold flex-1">
+                Clientes Cerrados
               </span>
-              <Badge variant="outline" className="ml-auto bg-emerald-500/10 text-emerald-700 border-emerald-300">
-                {closedLeads.length} cliente{closedLeads.length !== 1 ? 's' : ''}
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-300">
+                {closedLeads.length}
               </Badge>
+              {closedSectionExpanded ? (
+                <ChevronUp className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-emerald-600" />
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-8">
-            {closedLeads.length > 0 ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {closedLeads.map((lead) => (
-                    <ClosedLeadCard key={lead.id} lead={lead} />
-                  ))}
-                </div>
-                {closedLeads.length > 6 && (
-                  <div className="text-center">
-                    <Button asChild variant="outline" className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300">
-                      <Link to="/leads?stage=CERRADO_GANADO">
-                        Ver todos los clientes cerrados
-                      </Link>
-                    </Button>
+          
+          {closedSectionExpanded && (
+            <CardContent className="p-6">
+              {closedLeads.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {closedLeads.slice(0, 10).map((lead) => (
+                      <CompactClosedLeadCard key={lead.id} lead={lead} />
+                    ))}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="p-6 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-2xl max-w-md mx-auto">
-                  <Trophy className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-300 mb-2">
-                    ¡Primer cierre en camino!
-                  </h3>
-                  <p className="text-emerald-600 dark:text-emerald-400">
-                    Los clientes cerrados aparecerán aquí cuando completes tu primer deal exitoso.
-                  </p>
+                  {closedLeads.length > 10 && (
+                    <div className="text-center pt-4">
+                      <Button asChild variant="outline" size="sm" className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300">
+                        <Link to="/leads?stage=CERRADO_GANADO">
+                          Ver todos ({closedLeads.length})
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-          </CardContent>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="p-4 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-xl max-w-sm mx-auto">
+                    <Trophy className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                    <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                      ¡Primer cierre en camino!
+                    </h3>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      Los clientes cerrados aparecerán aquí.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>
   );
 }
 
-// Component for individual closed lead cards
-function ClosedLeadCard({ lead }: { lead: any }) {
+// Compact component for closed lead cards - Only company name and MRR value
+function CompactClosedLeadCard({ lead }: { lead: any }) {
   const { dealsMap = {}, isLoading } = useLeadDeals([lead.id]);
-  const deal = dealsMap && dealsMap[lead.id] ? dealsMap[lead.id][0] : null; // Get the first deal for this lead
+  const deal = dealsMap && dealsMap[lead.id] ? dealsMap[lead.id][0] : null;
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -508,24 +522,13 @@ function ClosedLeadCard({ lead }: { lead: any }) {
     }).format(amount);
   };
 
-  // Add loading state handling
   if (isLoading) {
     return (
-      <Card className="bg-white/80 dark:bg-slate-800/50 border-emerald-200 dark:border-emerald-700 shadow-lg">
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-200 rounded-lg" />
-              <div className="space-y-2 flex-1">
-                <div className="h-5 bg-emerald-200 rounded w-3/4" />
-                <div className="h-4 bg-emerald-200 rounded w-1/2" />
-              </div>
-            </div>
-            <div className="h-20 bg-emerald-100 rounded-lg" />
-            <div className="space-y-2">
-              <div className="h-4 bg-emerald-200 rounded w-full" />
-              <div className="h-4 bg-emerald-200 rounded w-2/3" />
-            </div>
+      <Card className="bg-white/80 dark:bg-slate-800/50 border-emerald-200 dark:border-emerald-700 shadow-sm">
+        <CardContent className="p-3">
+          <div className="animate-pulse space-y-2">
+            <div className="h-4 bg-emerald-200 rounded w-3/4" />
+            <div className="h-5 bg-emerald-200 rounded w-1/2" />
           </div>
         </CardContent>
       </Card>
@@ -533,103 +536,49 @@ function ClosedLeadCard({ lead }: { lead: any }) {
   }
 
   return (
-    <Card className="bg-white/80 dark:bg-slate-800/50 border-emerald-200 dark:border-emerald-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
-      <CardContent className="p-6">
-        <div className="space-y-4">
-          {/* Company Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg">
-                <Building className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight">
-                  {lead.company_name}
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Cerrado: {formatDateToBogota(lead.stage_entered_at)}
-                </p>
-              </div>
+    <Card className="bg-white/90 dark:bg-slate-800/60 border-emerald-200 dark:border-emerald-700 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] group">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Company Name */}
+          <div className="flex items-center gap-2">
+            <div className="p-1 bg-emerald-500/10 rounded">
+              <Building className="h-3 w-3 text-emerald-600" />
             </div>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Ganado
-            </Badge>
+            <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight">
+              {lead.company_name}
+            </h3>
           </div>
 
-          {/* Deal Information */}
-          {deal && (
-            <div className="space-y-3 p-4 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">MRR</span>
-                <span className="font-bold text-emerald-800 dark:text-emerald-200">
-                  {formatCurrency(deal.mrr_usd)}/mes
-                </span>
-              </div>
-              {deal.implementation_fee_usd > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Implementation Fee</span>
-                  <span className="font-bold text-emerald-800 dark:text-emerald-200">
-                    {formatCurrency(deal.implementation_fee_usd)}
-                  </span>
+          {/* MRR Value */}
+          <div className="text-center">
+            {deal ? (
+              <div className="space-y-1">
+                <div className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                  {formatCurrency(deal.mrr_usd)}
                 </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Inicio</span>
-                <span className="text-sm text-emerald-600 dark:text-emerald-400">
-                  {new Date(deal.start_date).toLocaleDateString('es-CO')}
-                </span>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  MRR/mes
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Contact Information */}
-          <div className="space-y-2">
-            {lead.contact_name && (
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-600 dark:text-slate-300">{lead.contact_name}</span>
-                {lead.contact_role && (
-                  <span className="text-slate-500 dark:text-slate-400">- {lead.contact_role}</span>
-                )}
-              </div>
-            )}
-            {lead.email && (
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-600 dark:text-slate-300 truncate">{lead.email}</span>
-              </div>
-            )}
-            {lead.phone && (
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-600 dark:text-slate-300">{lead.phone}</span>
-              </div>
-            )}
-            {lead.owner_id && (
-              <div className="flex items-center gap-2 text-sm">
-                <Target className="h-4 w-4 text-slate-400" />
-                <span className="text-slate-600 dark:text-slate-300">
-                  Owner: {formatOwnerName(lead.owner_id)}
-                </span>
+            ) : (
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                Sin deal
               </div>
             )}
           </div>
 
-          {/* Action Button */}
-          <div className="pt-2">
-            <Button 
-              asChild 
-              variant="outline" 
-              size="sm" 
-              className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300"
-            >
-              <Link to={`/leads/${lead.id}`} className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Ver Detalles
-              </Link>
-            </Button>
-          </div>
+          {/* Quick View Button (appears on hover) */}
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="sm" 
+            className="w-full h-7 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+          >
+            <Link to={`/leads/${lead.id}`} className="flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              Ver
+            </Link>
+          </Button>
         </div>
       </CardContent>
     </Card>
