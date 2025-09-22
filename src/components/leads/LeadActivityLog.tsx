@@ -171,17 +171,18 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffHours < 1) return 'Hace menos de 1 hora';
-    if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-    if (diffDays < 7) return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+    if (diffMinutes < 1) return 'Ahora mismo';
+    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+    if (diffHours < 24) return `Hace ${diffHours}h`;
+    if (diffDays < 7) return `Hace ${diffDays}d`;
     
     return date.toLocaleDateString('es-ES', { 
       day: 'numeric', 
-      month: 'short',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      month: 'short'
     });
   };
 
@@ -312,8 +313,17 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
                       <Badge variant="secondary" className="text-xs">
                         {ACTIVITY_TYPES[activity.type].label}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground font-medium">
                         {formatRelativeTime(activity.created_at)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        • {new Date(activity.created_at).toLocaleDateString('es-ES', { 
+                          day: '2-digit',
+                          month: '2-digit', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
                     
