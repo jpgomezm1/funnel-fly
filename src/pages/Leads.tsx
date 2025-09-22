@@ -93,8 +93,8 @@ export default function Leads() {
     
     try {
       await upsertDeal({
-        ...dealData,
-        lead_id: selectedLeadForDeal.id,
+        leadId: selectedLeadForDeal.id,
+        dealData,
       });
       
       await updateLeadStage(selectedLeadForDeal.id, 'CERRADO_GANADO');
