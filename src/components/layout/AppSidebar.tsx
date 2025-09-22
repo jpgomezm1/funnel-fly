@@ -70,7 +70,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <h1 className="text-lg font-bold text-sidebar-foreground">CRM WhatsApp</h1>
+              <h1 className="text-lg font-bold text-sidebar-foreground">CRM irrelevant</h1>
               <p className="text-xs text-sidebar-foreground/60">Gestión de clientes</p>
             </div>
           )}
