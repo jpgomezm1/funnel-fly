@@ -493,6 +493,7 @@ export default function Leads() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                      <SelectItem value="AI Academy">AI Academy</SelectItem>
                       <SelectItem value="Otro Desarrollo">Otro Desarrollo</SelectItem>
                     </SelectContent>
                   </Select>

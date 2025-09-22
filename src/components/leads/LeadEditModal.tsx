@@ -217,6 +217,9 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
                       <SelectItem value="WhatsApp" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
                         WhatsApp
                       </SelectItem>
+                      <SelectItem value="AI Academy" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                        AI Academy
+                      </SelectItem>
                       <SelectItem value="Otro Desarrollo" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
                         Otro Desarrollo
                       </SelectItem>
