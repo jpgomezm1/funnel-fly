@@ -556,16 +556,31 @@ function CompactClosedLeadCard({ lead }: { lead: any }) {
             </h3>
           </div>
 
-          {/* MRR Value */}
-          <div className="text-center">
+          {/* MRR Value and Implementation Fee */}
+          <div className="text-center space-y-2">
             {deal ? (
-              <div className="space-y-1">
-                <div className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                  {formatCurrency(deal.mrr_usd)}
+              <div className="space-y-2">
+                {/* MRR */}
+                <div>
+                  <div className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                    {formatCurrency(deal.mrr_usd)}
+                  </div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    MRR/mes
+                  </div>
                 </div>
-                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                  MRR/mes
-                </div>
+                
+                {/* Implementation Fee */}
+                {deal.implementation_fee_usd > 0 && (
+                  <div className="pt-1 border-t border-emerald-200 dark:border-emerald-700">
+                    <div className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                      {formatCurrency(deal.implementation_fee_usd)}
+                    </div>
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                      Impl. Fee
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-sm text-slate-500 dark:text-slate-400">
