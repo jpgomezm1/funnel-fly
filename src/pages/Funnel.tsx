@@ -77,13 +77,13 @@ export default function Funnel() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (over && active.id !== over.id) {
+    if (over) {
       const leadId = active.id as string;
       const newStage = over.id as LeadStage;
       const lead = leads.find(l => l.id === leadId);
       
-      // Verificar si es una etapa válida
-      if (STAGE_ORDER.includes(newStage) && lead) {
+      // Verificar si es una etapa válida y diferente a la actual
+      if (STAGE_ORDER.includes(newStage) && lead && lead.stage !== newStage) {
         // Update lead stage first
         await updateLeadStage(leadId, newStage);
         
