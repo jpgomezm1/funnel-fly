@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
   TableBody,
@@ -92,12 +93,33 @@ export default function Leads() {
     if (!selectedLeadForDeal) return;
     
     try {
-      await upsertDeal({
-        leadId: selectedLeadForDeal.id,
-        dealData,
-      });
-      
+      // First update the lead stage to trigger deal creation
       await updateLeadStage(selectedLeadForDeal.id, 'CERRADO_GANADO');
+      
+      // Then find the created deal and update it with the correct values
+      const { data: existingDeals } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('lead_id', selectedLeadForDeal.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      const existingDeal = existingDeals?.[0];
+      
+      if (existingDeal) {
+        // Update the existing deal with the new values
+        await upsertDeal({
+          leadId: selectedLeadForDeal.id,
+          dealId: existingDeal.id,
+          dealData,
+        });
+      } else {
+        // Fallback: create new deal if none exists
+        await upsertDeal({
+          leadId: selectedLeadForDeal.id,
+          dealData,
+        });
+      }
       
       setDealModalOpen(false);
       setSelectedLeadForDeal(null);
