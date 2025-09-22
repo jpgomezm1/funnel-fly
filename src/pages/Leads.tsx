@@ -14,7 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadCreateModal } from '@/components/leads/LeadCreateModal';
+import { DealModal } from '@/components/deals/DealModal';
 import { useLeads } from '@/hooks/useLeads';
+import { useDeals } from '@/hooks/useDeals';
 import {
   Lead,
   LeadStage,
@@ -50,6 +52,10 @@ export default function Leads() {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [dealModalOpen, setDealModalOpen] = useState(false);
+  const [selectedLeadForDeal, setSelectedLeadForDeal] = useState<Lead | null>(null);
+  
+  const { upsertDeal } = useDeals();
 
   // Filtrar leads
   const filteredLeads = leads.filter((lead) => {
@@ -71,6 +77,38 @@ export default function Leads() {
     } catch (error) {
       console.error('Error creating lead:', error);
     }
+  };
+
+  const handleStageChange = (lead: Lead, newStage: LeadStage) => {
+    if (newStage === 'CERRADO_GANADO') {
+      setSelectedLeadForDeal(lead);
+      setDealModalOpen(true);
+    } else {
+      updateLeadStage(lead.id, newStage);
+    }
+  };
+
+  const handleDealSave = async (dealData: any) => {
+    if (!selectedLeadForDeal) return;
+    
+    try {
+      await upsertDeal({
+        ...dealData,
+        lead_id: selectedLeadForDeal.id,
+      });
+      
+      await updateLeadStage(selectedLeadForDeal.id, 'CERRADO_GANADO');
+      
+      setDealModalOpen(false);
+      setSelectedLeadForDeal(null);
+    } catch (error) {
+      console.error('Error saving deal:', error);
+    }
+  };
+
+  const handleDealModalClose = () => {
+    setDealModalOpen(false);
+    setSelectedLeadForDeal(null);
   };
 
   const getStageColor = (stage: LeadStage) => {
@@ -406,7 +444,7 @@ export default function Leads() {
                 <TableCell className="py-4">
                   <Select
                     value={lead.stage}
-                    onValueChange={(value) => updateLeadStage(lead.id, value as LeadStage)}
+                    onValueChange={(value) => handleStageChange(lead, value as LeadStage)}
                   >
                     <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none bg-transparent">
                       <Badge
@@ -485,6 +523,14 @@ export default function Leads() {
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
         onSave={handleCreateLead}
+      />
+
+      {/* Deal Modal */}
+      <DealModal
+        open={dealModalOpen}
+        onClose={handleDealModalClose}
+        onSave={handleDealSave}
+        leadCompanyName={selectedLeadForDeal?.company_name || ''}
       />
     </div>
   );
