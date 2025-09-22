@@ -496,8 +496,8 @@ export default function Dashboard() {
 
 // Component for individual closed lead cards
 function ClosedLeadCard({ lead }: { lead: any }) {
-  const { dealsMap } = useLeadDeals([lead.id]);
-  const deal = dealsMap[lead.id]?.[0]; // Get the first deal for this lead
+  const { dealsMap = {}, isLoading } = useLeadDeals([lead.id]);
+  const deal = dealsMap && dealsMap[lead.id] ? dealsMap[lead.id][0] : null; // Get the first deal for this lead
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -507,6 +507,30 @@ function ClosedLeadCard({ lead }: { lead: any }) {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Add loading state handling
+  if (isLoading) {
+    return (
+      <Card className="bg-white/80 dark:bg-slate-800/50 border-emerald-200 dark:border-emerald-700 shadow-lg">
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-200 rounded-lg" />
+              <div className="space-y-2 flex-1">
+                <div className="h-5 bg-emerald-200 rounded w-3/4" />
+                <div className="h-4 bg-emerald-200 rounded w-1/2" />
+              </div>
+            </div>
+            <div className="h-20 bg-emerald-100 rounded-lg" />
+            <div className="space-y-2">
+              <div className="h-4 bg-emerald-200 rounded w-full" />
+              <div className="h-4 bg-emerald-200 rounded w-2/3" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-white/80 dark:bg-slate-800/50 border-emerald-200 dark:border-emerald-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
