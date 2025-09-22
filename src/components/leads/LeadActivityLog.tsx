@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,9 +22,10 @@ interface ActivityLog {
   lead_id: string;
   type: 'call' | 'email' | 'meeting' | 'note' | 'quote' | 'follow_up';
   description: string;
-  details?: string;
+  details?: string | null;
   created_at: string;
-  created_by?: string;
+  updated_at: string;
+  created_by?: string | null;
 }
 
 interface LeadActivityLogProps {
@@ -82,15 +83,31 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
   const loadActivities = useCallback(async () => {
     try {
       setLoading(true);
-      // En una implementación real, esto vendría de una tabla de actividades
-      // Por ahora simulamos datos vacíos
-      setActivities([]);
+      const { data, error } = await supabase
+        .from('lead_activities')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setActivities((data || []) as ActivityLog[]);
     } catch (error) {
       console.error('Error loading activities:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al cargar las actividades',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   }, [leadId]);
+
+  useEffect(() => {
+    if (leadId) {
+      loadActivities();
+    }
+  }, [loadActivities]);
 
   const handleSaveActivity = async () => {
     if (!newActivity.description.trim()) {
@@ -104,18 +121,21 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
 
     setSaving(true);
     try {
-      // Simular guardado de actividad
-      // En implementación real, esto se guardaría en una tabla lead_activities
-      const mockActivity: ActivityLog = {
-        id: Date.now().toString(),
-        lead_id: leadId,
-        type: newActivity.type,
-        description: newActivity.description,
-        details: newActivity.details || undefined,
-        created_at: new Date().toISOString(),
-      };
+      const { data, error } = await supabase
+        .from('lead_activities')
+        .insert({
+          lead_id: leadId,
+          type: newActivity.type,
+          description: newActivity.description,
+          details: newActivity.details || null,
+        })
+        .select()
+        .single();
 
-      setActivities(prev => [mockActivity, ...prev]);
+      if (error) throw error;
+
+      // Add the new activity to the local state
+      setActivities(prev => [data as ActivityLog, ...prev]);
       
       // Limpiar formulario
       setNewActivity({
