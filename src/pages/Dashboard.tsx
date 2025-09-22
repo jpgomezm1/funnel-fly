@@ -511,7 +511,14 @@ export default function Dashboard() {
 // Compact component for closed lead cards - Only company name and MRR value
 function CompactClosedLeadCard({ lead }: { lead: any }) {
   const { dealsMap = {}, isLoading } = useLeadDeals([lead.id]);
-  const deal = dealsMap && dealsMap[lead.id] ? dealsMap[lead.id][0] : null;
+  
+  // Get the deal with the highest MRR value for this lead
+  const deals = dealsMap[lead.id] || [];
+  const deal = deals.length > 0 
+    ? deals.reduce((highest, current) => 
+        current.mrr_usd > highest.mrr_usd ? current : highest
+      )
+    : null;
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
