@@ -44,11 +44,12 @@ import {
   Download,
   MoreVertical,
   Calendar,
-  Clock
+  Clock,
+  Tag
 } from 'lucide-react';
 
 export default function Leads() {
-  const { leads, loading, createLead, updateLeadStage } = useLeads();
+  const { leads, loading, createLead, updateLeadStage, updateLead } = useLeads();
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
@@ -131,6 +132,14 @@ export default function Leads() {
   const handleDealModalClose = () => {
     setDealModalOpen(false);
     setSelectedLeadForDeal(null);
+  };
+
+  const handleProductTagChange = async (leadId: string, newTag: string) => {
+    try {
+      await updateLead(leadId, { product_tag: newTag });
+    } catch (error) {
+      console.error('Error updating product tag:', error);
+    }
   };
 
   const getStageColor = (stage: LeadStage) => {
@@ -375,6 +384,12 @@ export default function Leads() {
               <TableHead className="font-semibold text-foreground">Canal/Subcanal</TableHead>
               <TableHead className="font-semibold text-foreground">
                 <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Producto
+                </div>
+              </TableHead>
+              <TableHead className="font-semibold text-foreground">
+                <div className="flex items-center gap-2">
                   <Target className="h-4 w-4" />
                   Etapa
                 </div>
@@ -461,6 +476,26 @@ export default function Leads() {
                       </Badge>
                     )}
                   </div>
+                </TableCell>
+
+                <TableCell className="py-4">
+                  <Select
+                    value={lead.product_tag || 'WhatsApp'}
+                    onValueChange={(value) => handleProductTagChange(lead.id, value)}
+                  >
+                    <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none bg-transparent">
+                      <Badge
+                        variant="default"
+                        className="cursor-pointer hover:scale-105 transition-transform bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+                      >
+                        {lead.product_tag || 'WhatsApp'}
+                      </Badge>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                      <SelectItem value="Otro Desarrollo">Otro Desarrollo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </TableCell>
 
                 <TableCell className="py-4">
