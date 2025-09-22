@@ -137,15 +137,13 @@ export function FunnelColumn({ stage, title, leads, count, dealsMap = {} }: Funn
             isOver && "bg-primary/5 border-2 border-dashed border-primary/30"
           )}
         >
-          <SortableContext items={leads.map(lead => lead.id)} strategy={verticalListSortingStrategy}>
-            {leads.map((lead) => (
-              <LeadCard
-                key={lead.id}
-                lead={lead}
-                deals={dealsMap[lead.id] || []}
-              />
-            ))}
-          </SortableContext>
+          {leads.map((lead) => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              deals={dealsMap[lead.id] || []}
+            />
+          ))}
 
           {leads.length === 0 && (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground text-sm border-2 border-dashed border-muted-foreground/20 rounded-lg bg-muted/10 hover:bg-muted/20 transition-colors">
