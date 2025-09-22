@@ -7,8 +7,12 @@ import {
   Target,
   FileText,
   ChevronDown,
-  Building2
+  Building2,
+  LogOut
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import {
   Sidebar,
   SidebarContent,
@@ -35,9 +39,27 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
+  const { signOut } = useAuth();
+  const { toast } = useToast();
 
   const isActive = (path: string) => currentPath === path;
   const collapsed = state === "collapsed";
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo cerrar la sesión",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente",
+      });
+    }
+  };
 
   return (
     <Sidebar className="border-sidebar-border">
@@ -55,7 +77,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-4">
+      <SidebarContent className="px-4 flex flex-col h-full">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
             Navegación
@@ -95,6 +117,32 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Logout button at the bottom */}
+        <div className="mt-auto pb-4">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleLogout}
+                      className="w-full justify-start gap-3 px-3 py-2 h-auto text-sm font-medium transition-all duration-200 hover:bg-sidebar-accent"
+                    >
+                      <LogOut className="h-4 w-4 text-sidebar-foreground/60" />
+                      {!collapsed && (
+                        <span className="text-sidebar-foreground">
+                          Cerrar Sesión
+                        </span>
+                      )}
+                    </Button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
