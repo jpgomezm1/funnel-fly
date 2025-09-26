@@ -1,8 +1,26 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+const resend = {
+  emails: {
+    send: async (payload: any) => {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to send email: ${await response.text()}`);
+      }
+      
+      return response.json();
+    }
+  }
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -271,7 +289,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: 'Pipeline CRM <onboarding@resend.dev>',
-      to: ['jpgomez@stayirrelevant.com'],
+      to: ['jpgomez@stayirrelevant.com', 'daniel@mc2.builders'],
       subject: template.subject,
       html: template.html,
     });
