@@ -1,3 +1,22 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+dist-ssr
+build
+*.local
+
+# Environment variables - NEVER COMMIT THESE
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
 # Logs
 logs
 *.log
@@ -7,18 +26,46 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+supabase/.linked/
+
+# Claude Code
+.claude/settings.local.json
+
+# External files and data exports (contain sensitive data)
+ex_files/
+ex_rs_metricool/
+
+# Test coverage
+coverage/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp

@@ -1,35 +1,27 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Plus, 
-  Phone, 
-  Calendar, 
-  Mail, 
-  FileText, 
-  MessageSquare, 
-  Upload,
-  Clock
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Plus, Phone, Calendar, Mail, FileText, MessageSquare, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ActivityLog {
   id: string;
   lead_id: string;
+  project_id?: string | null;
   type: 'call' | 'email' | 'meeting' | 'note' | 'quote' | 'follow_up';
   description: string;
-  details?: string | null;
+  details?: string;
   created_at: string;
-  updated_at: string;
-  created_by?: string | null;
+  created_by?: string;
 }
 
 interface LeadActivityLogProps {
   leadId: string;
+  projectId?: string; // optional - if provided, activities will be linked to this project
   onActivityAdded?: () => void;
 }
 
@@ -37,39 +29,35 @@ const ACTIVITY_TYPES = {
   call: { label: 'Llamada', icon: Phone, color: 'bg-blue-500' },
   email: { label: 'Email', icon: Mail, color: 'bg-green-500' },
   meeting: { label: 'Reunión', icon: Calendar, color: 'bg-purple-500' },
-  note: { label: 'Nota', icon: MessageSquare, color: 'bg-gray-500' },
+  note: { label: 'Nota', icon: MessageSquare, color: 'bg-slate-500' },
   quote: { label: 'Cotización', icon: FileText, color: 'bg-orange-500' },
-  follow_up: { label: 'Seguimiento', icon: Clock, color: 'bg-yellow-500' }
+  follow_up: { label: 'Seguimiento', icon: Clock, color: 'bg-amber-500' }
 };
 
 const QUICK_TEMPLATES = {
   call: [
-    'Llamé pero no respondió - dejar mensaje de voz',
-    'Conversación telefónica - interesado en el producto',
-    'Llamé pero está ocupado - reagendar llamada',
-    'Llamada exitosa - enviar información adicional'
+    'Llamé pero no respondió',
+    'Conversación telefónica exitosa',
+    'Ocupado, reagendar llamada'
   ],
   email: [
-    'Envié información del producto vía email',
-    'Email de seguimiento enviado',
-    'Respondió email - interesado en demo',
-    'Email rebotó - verificar dirección'
+    'Envié información del producto',
+    'Email de seguimiento',
+    'Respondió email'
   ],
   meeting: [
-    'Reunión agendada para [fecha]',
-    'Presentación del producto completada',
-    'Reunión de seguimiento programada',
-    'Demo técnica realizada'
+    'Reunión agendada',
+    'Presentación completada',
+    'Demo realizada'
   ],
   follow_up: [
-    'Programar seguimiento en 1 semana',
-    'Esperando decisión del cliente',
-    'Contactar después de [fecha específica]',
-    'Cliente pidió tiempo para evaluar'
+    'Seguimiento en 1 semana',
+    'Esperando decisión',
+    'Contactar después'
   ]
 };
 
-export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProps) {
+export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActivityLogProps) {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,34 +68,32 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
     details: ''
   });
 
-  const loadActivities = useCallback(async () => {
-    try {
+  // Fetch activities for this lead (only those without project_id - lead-level activities)
+  useEffect(() => {
+    const fetchActivities = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('lead_activities')
-        .select('*')
-        .eq('lead_id', leadId)
-        .order('created_at', { ascending: false });
+      try {
+        // Only fetch activities without project_id (lead-level activities)
+        const { data, error } = await supabase
+          .from('lead_activities')
+          .select('*')
+          .eq('lead_id', leadId)
+          .is('project_id', null)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setActivities((data || []) as ActivityLog[]);
-    } catch (error) {
-      console.error('Error loading activities:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al cargar las actividades',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+        if (error) throw error;
+        setActivities(data || []);
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (leadId) {
+      fetchActivities();
     }
   }, [leadId]);
-
-  useEffect(() => {
-    if (leadId) {
-      loadActivities();
-    }
-  }, [loadActivities]);
 
   const handleSaveActivity = async () => {
     if (!newActivity.description.trim()) {
@@ -125,6 +111,7 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
         .from('lead_activities')
         .insert({
           lead_id: leadId,
+          project_id: projectId || null, // null = lead-level activity
           type: newActivity.type,
           description: newActivity.description,
           details: newActivity.details || null,
@@ -134,15 +121,18 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
 
       if (error) throw error;
 
-      // Add the new activity to the local state
-      setActivities(prev => [data as ActivityLog, ...prev]);
-      
-      // Limpiar formulario
-      setNewActivity({
-        type: 'call',
-        description: '',
-        details: ''
-      });
+      // Update lead last_activity_at
+      await supabase
+        .from('leads')
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq('id', leadId);
+
+      // Only add to local state if it's a lead-level activity
+      if (!projectId) {
+        setActivities(prev => [data, ...prev]);
+      }
+
+      setNewActivity({ type: 'call', description: '', details: '' });
       setShowForm(false);
 
       toast({
@@ -171,60 +161,60 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMinutes / 60);
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMinutes < 1) return 'Ahora mismo';
-    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+    if (diffHours < 1) return 'Hace menos de 1 hora';
     if (diffHours < 24) return `Hace ${diffHours}h`;
     if (diffDays < 7) return `Hace ${diffDays}d`;
-    
-    return date.toLocaleDateString('es-ES', { 
-      day: 'numeric', 
-      month: 'short'
+
+    return date.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
     });
   };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-medium flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Log de Actividades
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            {projectId ? 'Actividades del Proyecto' : 'Actividades de la Empresa'}
           </div>
-          <Button 
-            size="sm" 
-            onClick={() => setShowForm(!showForm)}
+          <Button
+            size="sm"
             variant={showForm ? "secondary" : "default"}
+            onClick={() => setShowForm(!showForm)}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-1" />
             {showForm ? 'Cancelar' : 'Agregar'}
           </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Form for new activity */}
+        {/* Form */}
         {showForm && (
-          <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium mb-2 block">Tipo de Actividad</label>
-                <Select 
-                  value={newActivity.type} 
-                  onValueChange={(value: keyof typeof ACTIVITY_TYPES) => 
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Tipo
+                </label>
+                <Select
+                  value={newActivity.type}
+                  onValueChange={(value: keyof typeof ACTIVITY_TYPES) =>
                     setNewActivity(prev => ({ ...prev, type: value, description: '' }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(ACTIVITY_TYPES).map(([key, config]) => (
                       <SelectItem key={key} value={key}>
                         <div className="flex items-center gap-2">
-                          <config.icon className="h-4 w-4" />
+                          <config.icon className="h-3 w-3" />
                           {config.label}
                         </div>
                       </SelectItem>
@@ -232,17 +222,19 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <label className="text-sm font-medium mb-2 block">Templates Rápidos</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Template
+                </label>
                 <Select onValueChange={handleTemplateSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar template" />
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
                     {QUICK_TEMPLATES[newActivity.type]?.map((template, index) => (
                       <SelectItem key={index} value={template}>
-                        <span className="text-sm">{template}</span>
+                        {template}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -251,86 +243,69 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Descripción *</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Descripción
+              </label>
               <Textarea
-                placeholder="Describe la actividad realizada..."
+                placeholder="Describe la actividad..."
                 value={newActivity.description}
                 onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
-                className="min-h-[80px]"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Detalles Adicionales</label>
-              <Textarea
-                placeholder="Información adicional, próximos pasos, etc..."
-                value={newActivity.details}
-                onChange={(e) => setNewActivity(prev => ({ ...prev, details: e.target.value }))}
-                className="min-h-[60px]"
+                className="min-h-[60px] resize-none"
               />
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowForm(false)}
-                disabled={saving}
-              >
+              <Button variant="outline" size="sm" onClick={() => setShowForm(false)} disabled={saving}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveActivity} disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar Actividad'}
+              <Button size="sm" onClick={handleSaveActivity} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar'}
               </Button>
             </div>
           </div>
         )}
 
         {/* Activities list */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Cargando actividades...
-            </div>
+            <p className="text-sm text-muted-foreground text-center py-6">Cargando...</p>
           ) : activities.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">No hay actividades registradas</p>
-              <p className="text-sm">Comienza agregando la primera actividad</p>
+            <div className="text-center py-6">
+              <MessageSquare className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {projectId ? 'Sin actividades en este proyecto' : 'Sin actividades a nivel de empresa'}
+              </p>
+              {!projectId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Las actividades de proyectos específicos se ven en cada proyecto
+                </p>
+              )}
             </div>
           ) : (
             activities.map((activity) => {
               const ActivityIcon = ACTIVITY_TYPES[activity.type].icon;
               const colorClass = ACTIVITY_TYPES[activity.type].color;
-              
+
               return (
                 <div key={activity.id} className="flex gap-3 p-3 border rounded-lg">
-                  <div className={`w-8 h-8 rounded-full ${colorClass} flex items-center justify-center flex-shrink-0`}>
-                    <ActivityIcon className="h-4 w-4 text-white" />
+                  <div className={`w-7 h-7 rounded-full ${colorClass} flex items-center justify-center flex-shrink-0`}>
+                    <ActivityIcon className="h-3.5 w-3.5 text-white" />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-[10px] h-5">
                         {ACTIVITY_TYPES[activity.type].label}
                       </Badge>
-                      <span className="text-xs text-muted-foreground font-medium">
+                      <span className="text-xs text-muted-foreground">
                         {formatRelativeTime(activity.created_at)}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        • {new Date(activity.created_at).toLocaleDateString('es-ES', { 
-                          day: '2-digit',
-                          month: '2-digit', 
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
                     </div>
-                    
-                    <p className="text-sm font-medium mb-1">{activity.description}</p>
-                    
+
+                    <p className="text-sm">{activity.description}</p>
+
                     {activity.details && (
-                      <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {activity.details}
                       </p>
                     )}
@@ -341,55 +316,46 @@ export function LeadActivityLog({ leadId, onActivityAdded }: LeadActivityLogProp
           )}
         </div>
 
-        {/* Quick action buttons */}
+        {/* Quick actions */}
         {!showForm && (
-          <div className="flex flex-wrap gap-2 pt-4 border-t">
-            <Button 
-              size="sm" 
-              variant="outline" 
+          <div className="flex flex-wrap gap-2 pt-3 border-t">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
               onClick={() => {
-                setNewActivity({
-                  type: 'call',
-                  description: 'Llamé pero no respondió - dejar mensaje de voz',
-                  details: ''
-                });
+                setNewActivity({ type: 'call', description: 'No respondió', details: '' });
                 setShowForm(true);
               }}
             >
-              <Phone className="h-4 w-4 mr-1" />
+              <Phone className="h-3 w-3 mr-1" />
               No respondió
             </Button>
-            
-            <Button 
-              size="sm" 
-              variant="outline" 
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
               onClick={() => {
-                setNewActivity({
-                  type: 'meeting',
-                  description: 'Reunión agendada para [fecha]',
-                  details: ''
-                });
+                setNewActivity({ type: 'meeting', description: 'Reunión agendada', details: '' });
                 setShowForm(true);
               }}
             >
-              <Calendar className="h-4 w-4 mr-1" />
-              Agendar reunión
+              <Calendar className="h-3 w-3 mr-1" />
+              Reunión
             </Button>
-            
-            <Button 
-              size="sm" 
-              variant="outline" 
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
               onClick={() => {
-                setNewActivity({
-                  type: 'quote',
-                  description: 'Cotización enviada al cliente',
-                  details: ''
-                });
+                setNewActivity({ type: 'quote', description: 'Cotización enviada', details: '' });
                 setShowForm(true);
               }}
             >
-              <FileText className="h-4 w-4 mr-1" />
-              Envié cotización
+              <FileText className="h-3 w-3 mr-1" />
+              Cotización
             </Button>
           </div>
         )}

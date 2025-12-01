@@ -1,28 +1,25 @@
+import { useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Lead, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
+import { Lead, CHANNEL_LABELS, LeadChannel } from '@/types/database';
 import { formatDistanceToBogota } from '@/lib/date-utils';
-import { cn, formatOwnerName } from '@/lib/utils';
 import {
-  Building,
+  Building2,
   User,
   Phone,
   Mail,
-  MessageSquare,
-  Plus,
-  Calendar,
-  DollarSign,
-  Sparkles,
-  ExternalLink
+  Clock,
+  AlertTriangle,
+  Globe,
+  Users,
+  Megaphone,
+  TrendingUp,
 } from 'lucide-react';
-import { useState } from 'react';
-import { useLeads } from '@/hooks/useLeads';
 import { useDeals } from '@/hooks/useDeals';
+import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 interface LeadCardProps {
   lead: Lead;
@@ -30,222 +27,223 @@ interface LeadCardProps {
   deals?: any[];
 }
 
+// Channel icons mapping
+const CHANNEL_ICONS: Record<LeadChannel, React.ElementType> = {
+  'OUTBOUND_APOLLO': Megaphone,
+  'WARM_INTRO': Users,
+  'INBOUND_REDES': Globe,
+};
+
+// Channel colors for badges
+const CHANNEL_COLORS: Record<LeadChannel, string> = {
+  'OUTBOUND_APOLLO': 'bg-amber-100 text-amber-700 border-amber-200',
+  'WARM_INTRO': 'bg-purple-100 text-purple-700 border-purple-200',
+  'INBOUND_REDES': 'bg-blue-100 text-blue-700 border-blue-200',
+};
+
 export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps) {
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
-  const [newNote, setNewNote] = useState('');
-  const { addNote } = useLeads();
   const { getMrrBadgeInfo } = useDeals();
-  
+
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: lead.id });
+  } = useSortable({ id: `lead-${lead.id}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
-    
-    await addNote(lead.id, newNote);
-    setNewNote('');
-    setNoteDialogOpen(false);
-  };
+  // Calculate time in stage and staleness
+  const timeMetrics = useMemo(() => {
+    const now = new Date();
+    const enteredAt = lead.stage_entered_at
+      ? new Date(lead.stage_entered_at)
+      : new Date(lead.created_at);
+    const lastActivity = lead.last_activity_at
+      ? new Date(lead.last_activity_at)
+      : enteredAt;
 
+    const daysInStage = Math.floor((now.getTime() - enteredAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceActivity = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
+
+    const isStale = daysInStage > 7;
+    const isInactive = daysSinceActivity > 3;
+    const isNew = daysInStage <= 1;
+    const isHot = daysInStage <= 3 && !isNew;
+
+    return {
+      daysInStage,
+      daysSinceActivity,
+      isStale,
+      isInactive,
+      isNew,
+      isHot,
+    };
+  }, [lead.stage_entered_at, lead.last_activity_at, lead.created_at]);
+
+  const ChannelIcon = CHANNEL_ICONS[lead.channel] || Globe;
+  const mrrInfo = lead.stage === 'CERRADO_GANADO' ? getMrrBadgeInfo(deals) : null;
+
+  // Dragging preview
   if (isDragging) {
     return (
-      <Card className="w-80 bg-gradient-to-br from-primary/10 to-primary/20 border-2 border-dashed border-primary/60 rotate-2 shadow-xl backdrop-blur-sm">
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/20 rounded-lg">
-                <Building className="h-4 w-4 text-primary" />
-              </div>
-              <span className="font-semibold text-sm text-primary">{lead.company_name}</span>
-              <Sparkles className="h-4 w-4 text-primary ml-auto animate-pulse" />
-            </div>
+      <Card className="w-72 p-4 bg-primary/10 border-primary/30 border-2 border-dashed rotate-3 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-primary" />
           </div>
-        </CardContent>
+          <div>
+            <span className="text-sm font-semibold text-primary truncate block">
+              {lead.company_name}
+            </span>
+            {lead.contact_name && (
+              <span className="text-xs text-primary/70">{lead.contact_name}</span>
+            )}
+          </div>
+        </div>
       </Card>
     );
   }
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={cn(
-        "w-full group relative overflow-hidden transition-all duration-300 cursor-grab active:cursor-grabbing",
-        "bg-gradient-to-br from-card via-card to-card/95",
-        "border border-border/50 hover:border-primary/30",
-        "hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1",
-        "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-primary/5 before:to-transparent",
-        "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
-      )}
-    >
-      <CardContent className="p-4 relative z-10">
-        <div className="space-y-4">
-          {/* Header con empresa y acciones */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="p-2 bg-primary/10 rounded-lg shrink-0 group-hover:bg-primary/20 transition-colors">
-                <Building className="h-4 w-4 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                  {lead.company_name}
-                </h4>
-                {lead.contact_name && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <User className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{lead.contact_name}</span>
-                    {lead.contact_role && (
-                      <span className="text-xs opacity-70">• {lead.contact_role}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Aquí puedes agregar navegación al detalle del lead
-              }}
-            >
-              <ExternalLink className="h-3 w-3" />
-            </Button>
-          </div>
-
-          {/* Canal, Subcanal y Tag de Producto */}
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="text-xs font-medium bg-secondary/60 hover:bg-secondary">
-              {CHANNEL_LABELS[lead.channel]}
-            </Badge>
-            {lead.subchannel !== 'NINGUNO' && (
-              <Badge variant="outline" className="text-xs bg-background/50 border-primary/20">
-                {SUBCHANNEL_LABELS[lead.subchannel]}
+    <Link to={`/leads/${lead.id}`}>
+      <Card
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className={cn(
+          "p-3 cursor-grab active:cursor-grabbing transition-all duration-200",
+          "hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5",
+          "border-l-4",
+          timeMetrics.isStale && "border-l-amber-500 bg-amber-50/30",
+          timeMetrics.isNew && "border-l-emerald-500 bg-emerald-50/30",
+          timeMetrics.isHot && "border-l-blue-500",
+          !timeMetrics.isStale && !timeMetrics.isNew && !timeMetrics.isHot && "border-l-slate-300"
+        )}
+      >
+        <div className="space-y-2.5">
+          {/* Top badges row */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* New badge */}
+            {timeMetrics.isNew && (
+              <Badge className="text-[9px] h-4 px-1.5 bg-emerald-500 text-white">
+                NUEVO
               </Badge>
             )}
-            <Badge 
-              variant="default" 
-              className="text-xs font-semibold bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+
+            {/* Hot badge */}
+            {timeMetrics.isHot && (
+              <Badge className="text-[9px] h-4 px-1.5 bg-blue-500 text-white">
+                <TrendingUp className="h-2.5 w-2.5 mr-0.5" />
+                HOT
+              </Badge>
+            )}
+
+            {/* Stale warning */}
+            {timeMetrics.isStale && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-amber-400 text-amber-600 bg-amber-50">
+                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                {timeMetrics.daysInStage}d
+              </Badge>
+            )}
+
+            {/* Channel badge - pushed to right */}
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[9px] h-4 px-1.5 ml-auto",
+                CHANNEL_COLORS[lead.channel]
+              )}
             >
-              {lead.product_tag}
+              <ChannelIcon className="h-2.5 w-2.5 mr-0.5" />
+              {CHANNEL_LABELS[lead.channel]}
             </Badge>
           </div>
 
-          {/* MRR Badge for CERRADO_GANADO */}
-          {lead.stage === 'CERRADO_GANADO' && (
-            <div className="flex flex-wrap gap-2">
-              {(() => {
-                const badgeInfo = getMrrBadgeInfo(deals);
-                return (
-                  <Badge
-                    variant={badgeInfo.type === 'active' ? 'default' : 'destructive'}
-                    className={cn(
-                      "text-xs font-semibold",
-                      badgeInfo.type === 'active'
-                        ? "bg-green-500 hover:bg-green-600 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    )}
-                  >
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    {badgeInfo.text}
-                  </Badge>
-                );
-              })()}
+          {/* Company & Contact */}
+          <div className="flex items-start gap-2.5">
+            <div className={cn(
+              "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
+              "bg-slate-100 text-slate-600"
+            )}>
+              <Building2 className="h-4.5 w-4.5" />
             </div>
-          )}
-
-          {/* Información de contacto */}
-          {(lead.phone || lead.email) && (
-            <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/30">
-              {lead.phone && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Phone className="h-3 w-3 text-primary" />
-                  <span className="truncate font-medium">{lead.phone}</span>
-                </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                {lead.company_name}
+              </p>
+              {lead.contact_name && (
+                <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                  <User className="h-3 w-3 flex-shrink-0" />
+                  {lead.contact_name}
+                </p>
               )}
-              {lead.email && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Mail className="h-3 w-3 text-primary" />
-                  <span className="truncate font-medium">{lead.email}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Footer con metadata */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-            <div className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              <span className="truncate">
-                {formatOwnerName(lead.owner_id)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span className="truncate">
-                {formatDistanceToBogota(lead.last_activity_at)}
-              </span>
             </div>
           </div>
 
-          {/* Botón agregar nota */}
-          <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
+          {/* Contact info - compact */}
+          {(lead.phone || lead.email) && (
+            <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground pl-11">
+              {lead.phone && (
+                <span className="flex items-center gap-1.5 truncate">
+                  <Phone className="h-3 w-3 flex-shrink-0 text-emerald-500" />
+                  {lead.phone}
+                </span>
+              )}
+              {lead.email && (
+                <span className="flex items-center gap-1.5 truncate">
+                  <Mail className="h-3 w-3 flex-shrink-0 text-blue-500" />
+                  {lead.email}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Footer with metrics */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            {/* Time info */}
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1" title="Tiempo en etapa">
+                <Clock className="h-3 w-3" />
+                {timeMetrics.daysInStage}d en etapa
+              </span>
+            </div>
+
+            {/* MRR Badge for won deals */}
+            {mrrInfo && (
+              <Badge
                 className={cn(
-                  "w-full gap-2 h-9 bg-background/50 border-dashed border-primary/30",
-                  "hover:bg-primary/5 hover:border-primary/50 transition-all duration-200",
-                  "text-muted-foreground hover:text-primary"
+                  "text-[10px] h-5 font-semibold",
+                  mrrInfo.type === 'active'
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                    : "bg-red-500 hover:bg-red-600 text-white"
                 )}
-                onClick={(e) => e.stopPropagation()}
               >
-                <Plus className="h-3 w-3" />
-                <MessageSquare className="h-3 w-3" />
-                Agregar Nota
-              </Button>
-            </DialogTrigger>
-            <DialogContent onClick={(e) => e.stopPropagation()}>
-              <DialogHeader>
-                <DialogTitle>Agregar Nota - {lead.company_name}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Textarea
-                  placeholder="Escribe tu nota aquí..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setNoteDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleAddNote} disabled={!newNote.trim()}>
-                    Agregar Nota
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+                <TrendingUp className="h-3 w-3 mr-0.5" />
+                {mrrInfo.text}
+              </Badge>
+            )}
+
+            {/* Last activity for non-won */}
+            {!mrrInfo && (
+              <span
+                className={cn(
+                  "text-[10px]",
+                  timeMetrics.isInactive ? "text-amber-600 font-medium" : "text-muted-foreground"
+                )}
+                title="Última actividad"
+              >
+                {formatDistanceToBogota(lead.last_activity_at)}
+              </span>
+            )}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </Card>
+    </Link>
   );
 }

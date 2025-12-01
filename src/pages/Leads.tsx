@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
   TableBody,
@@ -12,14 +11,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LeadCreateModal } from '@/components/leads/LeadCreateModal';
-import { DealModal } from '@/components/deals/DealModal';
+import { Label } from '@/components/ui/label';
 import { useLeads } from '@/hooks/useLeads';
-import { useDeals } from '@/hooks/useDeals';
 import {
-  Lead,
+  LeadChannel,
+  LeadSubchannel,
   LeadStage,
   STAGE_LABELS,
   CHANNEL_LABELS,
@@ -27,39 +25,26 @@ import {
   STAGE_ORDER
 } from '@/types/database';
 import { formatDateToBogota, formatDistanceToBogota } from '@/lib/date-utils';
-import {
-  Plus,
-  Search,
-  Eye,
-  Edit,
-  Building,
-  User,
-  Phone,
-  Mail,
-  Users,
-  TrendingUp,
-  Target,
-  Activity,
-  Filter,
-  Download,
-  MoreVertical,
-  Calendar,
-  Clock,
-  Tag
-} from 'lucide-react';
+import { Plus, Search, ExternalLink } from 'lucide-react';
 
 export default function Leads() {
-  const { leads, loading, createLead, updateLeadStage, updateLead } = useLeads();
+  const { leads, loading, createLead, updateLeadStage } = useLeads();
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [dealModalOpen, setDealModalOpen] = useState(false);
-  const [selectedLeadForDeal, setSelectedLeadForDeal] = useState<Lead | null>(null);
-  
-  const { upsertDeal } = useDeals();
+  const [newLead, setNewLead] = useState({
+    company_name: '',
+    contact_name: '',
+    contact_role: '',
+    phone: '',
+    email: '',
+    channel: 'OUTBOUND_APOLLO' as LeadChannel,
+    subchannel: 'NINGUNO' as LeadSubchannel,
+    owner_id: '',
+    notes: '',
+  });
 
-  // Filtrar leads
   const filteredLeads = leads.filter((lead) => {
     const searchMatch =
       lead.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,524 +57,278 @@ export default function Leads() {
     return searchMatch && stageMatch && channelMatch;
   });
 
-  const handleCreateLead = async (leadData: any) => {
+  const handleCreateLead = async () => {
+    if (!newLead.company_name.trim()) return;
+
     try {
-      await createLead(leadData);
+      await createLead(newLead);
+      setNewLead({
+        company_name: '',
+        contact_name: '',
+        contact_role: '',
+        phone: '',
+        email: '',
+        channel: 'OUTBOUND_APOLLO',
+        subchannel: 'NINGUNO',
+        owner_id: '',
+        notes: '',
+      });
       setCreateDialogOpen(false);
     } catch (error) {
       console.error('Error creating lead:', error);
     }
   };
 
-  const handleStageChange = (lead: Lead, newStage: LeadStage) => {
-    if (newStage === 'CERRADO_GANADO') {
-      setSelectedLeadForDeal(lead);
-      setDealModalOpen(true);
-    } else {
-      updateLeadStage(lead.id, newStage);
-    }
-  };
-
-  const handleDealSave = async (dealData: any) => {
-    if (!selectedLeadForDeal) return;
-    
-    try {
-      // First update the lead stage to trigger deal creation
-      await updateLeadStage(selectedLeadForDeal.id, 'CERRADO_GANADO');
-      
-      // Then find the created deal and update it with the correct values
-      const { data: existingDeals } = await supabase
-        .from('deals')
-        .select('*')
-        .eq('lead_id', selectedLeadForDeal.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      const existingDeal = existingDeals?.[0];
-      
-      if (existingDeal) {
-        // Update the existing deal with the new values
-        await upsertDeal({
-          leadId: selectedLeadForDeal.id,
-          dealId: existingDeal.id,
-          dealData,
-        });
-      } else {
-        // Fallback: create new deal if none exists
-        await upsertDeal({
-          leadId: selectedLeadForDeal.id,
-          dealData,
-        });
-      }
-      
-      setDealModalOpen(false);
-      setSelectedLeadForDeal(null);
-    } catch (error) {
-      console.error('Error saving deal:', error);
-    }
-  };
-
-  const handleDealModalClose = () => {
-    setDealModalOpen(false);
-    setSelectedLeadForDeal(null);
-  };
-
-  const handleProductTagChange = async (leadId: string, newTag: string) => {
-    try {
-      await updateLead(leadId, { product_tag: newTag });
-    } catch (error) {
-      console.error('Error updating product tag:', error);
-    }
-  };
-
-  const getStageColor = (stage: LeadStage) => {
-    const colors = {
-      'PROSPECTO': 'secondary',
-      'CONTACTADO': 'default',
-      'DESCUBRIMIENTO': 'default',
-      'DEMOSTRACION': 'default',
-      'PROPUESTA': 'default',
-      'CERRADO_GANADO': 'default',
-      'CERRADO_PERDIDO': 'destructive',
-    } as const;
-    return colors[stage] || 'secondary';
+  const getStageVariant = (stage: LeadStage) => {
+    if (stage === 'CERRADO_GANADO') return 'default';
+    if (stage === 'CERRADO_PERDIDO') return 'destructive';
+    return 'secondary';
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Cargando leads...</div>
+        <p className="text-muted-foreground">Cargando...</p>
       </div>
     );
   }
 
-  // Calcular métricas
-  const totalLeads = leads.length;
-  const filteredCount = filteredLeads.length;
-  const leadsThisMonth = leads.filter(lead => {
-    const createdDate = new Date(lead.created_at);
-    const now = new Date();
-    return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
-  }).length;
-
-  const activeLeads = leads.filter(lead =>
-    !['CERRADO_GANADO', 'CERRADO_PERDIDO'].includes(lead.stage)
-  ).length;
-
-  const conversionRate = totalLeads > 0
-    ? Math.round((leads.filter(lead => lead.stage === 'CERRADO_GANADO').length / totalLeads) * 100)
-    : 0;
-
   return (
-    <div className="space-y-8">
-      {/* Header mejorado */}
-      <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <h1 className="text-4xl font-bold text-foreground bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                Gestión de Leads
-              </h1>
-            </div>
-            <p className="text-muted-foreground text-lg">
-              Administra y da seguimiento a todos tus prospectos comerciales
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Exportar
-            </Button>
-            <Button 
-              className="gap-2" 
-              size="lg"
-              onClick={() => setCreateDialogOpen(true)}
-            >
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Leads</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {filteredLeads.length} de {leads.length} leads
+          </p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
               Nuevo Lead
             </Button>
-          </div>
-        </div>
-
-        {/* Métricas Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-950/30 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-500 rounded-xl">
-                  <Users className="h-6 w-6 text-white" />
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Nuevo Lead</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company_name">Empresa *</Label>
+                  <Input
+                    id="company_name"
+                    placeholder="Nombre de la empresa"
+                    value={newLead.company_name}
+                    onChange={(e) => setNewLead({ ...newLead, company_name: e.target.value })}
+                  />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Leads</p>
-                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{totalLeads}</p>
-                  <p className="text-xs text-blue-600/70 dark:text-blue-400/70">Todos los tiempos</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-950/30 border-green-200 dark:border-green-800">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-500 rounded-xl">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">Leads Activos</p>
-                  <p className="text-3xl font-bold text-green-700 dark:text-green-300">{activeLeads}</p>
-                  <p className="text-xs text-green-600/70 dark:text-green-400/70">En proceso</p>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_name">Contacto</Label>
+                  <Input
+                    id="contact_name"
+                    placeholder="Nombre del contacto"
+                    value={newLead.contact_name}
+                    onChange={(e) => setNewLead({ ...newLead, contact_name: e.target.value })}
+                  />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-950/30 border-orange-200 dark:border-orange-800">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-500 rounded-xl">
-                  <Calendar className="h-6 w-6 text-white" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Teléfono</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+57 300 123 4567"
+                    value={newLead.phone}
+                    onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })}
+                  />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Este Mes</p>
-                  <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">{leadsThisMonth}</p>
-                  <p className="text-xs text-orange-600/70 dark:text-orange-400/70">Nuevos leads</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-950/30 border-purple-200 dark:border-purple-800">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-500 rounded-xl">
-                  <Target className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Conversión</p>
-                  <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{conversionRate}%</p>
-                  <p className="text-xs text-purple-600/70 dark:text-purple-400/70">Tasa cierre</p>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="contacto@empresa.com"
+                    value={newLead.email}
+                    onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
+                  />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Filters mejorados */}
-      <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por empresa, contacto o email..."
-                  className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary/50"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={stageFilter} onValueChange={setStageFilter}>
-                  <SelectTrigger className="w-48 h-11 bg-background/50">
-                    <SelectValue placeholder="Filtrar por etapa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las etapas</SelectItem>
-                    {STAGE_ORDER.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {STAGE_LABELS[stage]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Select value={channelFilter} onValueChange={setChannelFilter}>
-                <SelectTrigger className="w-48 h-11 bg-background/50">
-                  <SelectValue placeholder="Filtrar por canal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los canales</SelectItem>
-                  {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {(searchTerm || stageFilter !== 'all' || channelFilter !== 'all') && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setStageFilter('all');
-                    setChannelFilter('all');
-                  }}
-                  className="h-11"
-                >
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results count mejorado */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-sm px-3 py-1">
-            {filteredCount} de {totalLeads} leads
-          </Badge>
-          {filteredCount !== totalLeads && (
-            <span className="text-sm text-muted-foreground">
-              (filtrados)
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          Última actualización: hace pocos segundos
-        </div>
-      </div>
-
-      {/* Table mejorada */}
-      <Card className="overflow-hidden border-0 shadow-lg">
-        <Table>
-          <TableHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
-            <TableRow className="border-b-2 border-border/50 hover:bg-transparent">
-              <TableHead className="font-semibold text-foreground">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4" />
-                  Empresa
-                </div>
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Contacto
-                </div>
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">Canal/Subcanal</TableHead>
-              <TableHead className="font-semibold text-foreground">
-                <div className="flex items-center gap-2">
-                  <Tag className="h-4 w-4" />
-                  Producto
-                </div>
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  Etapa
-                </div>
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Fecha Ingreso
-                </div>
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Última Actividad
-                </div>
-              </TableHead>
-              <TableHead className="font-semibold text-foreground text-center">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLeads.map((lead, index) => (
-              <TableRow
-                key={lead.id}
-                className="hover:bg-muted/30 transition-colors group cursor-pointer border-b border-border/30"
-              >
-                <TableCell className="py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                      <Building className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {lead.company_name}
-                      </div>
-                      {lead.email && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                          <Mail className="h-3 w-3" />
-                          <span className="truncate">{lead.email}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell className="py-4">
-                  {lead.contact_name ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-green-500/10 rounded">
-                          <User className="h-3 w-3 text-green-600" />
-                        </div>
-                        <span className="font-medium text-sm">{lead.contact_name}</span>
-                      </div>
-                      {lead.contact_role && (
-                        <div className="text-xs text-muted-foreground pl-5">
-                          {lead.contact_role}
-                        </div>
-                      )}
-                      {lead.phone && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground pl-5">
-                          <Phone className="h-3 w-3" />
-                          <span>{lead.phone}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <div className="p-1 bg-muted/50 rounded">
-                        <User className="h-3 w-3" />
-                      </div>
-                      <span className="text-sm">Sin contacto</span>
-                    </div>
-                  )}
-                </TableCell>
-
-                <TableCell className="py-4">
-                  <div className="space-y-2">
-                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 font-medium">
-                      {CHANNEL_LABELS[lead.channel]}
-                    </Badge>
-                    {lead.subchannel !== 'NINGUNO' && (
-                      <Badge variant="outline" className="text-xs border-primary/30 text-primary/80">
-                        {SUBCHANNEL_LABELS[lead.subchannel]}
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-
-                <TableCell className="py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="channel">Canal</Label>
                   <Select
-                    value={lead.product_tag || 'WhatsApp'}
-                    onValueChange={(value) => handleProductTagChange(lead.id, value)}
+                    value={newLead.channel}
+                    onValueChange={(value) => setNewLead({ ...newLead, channel: value as LeadChannel })}
                   >
-                    <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none bg-transparent">
-                      <Badge
-                        variant="default"
-                        className="cursor-pointer hover:scale-105 transition-transform bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
-                      >
-                        {lead.product_tag || 'WhatsApp'}
-                      </Badge>
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                      <SelectItem value="AI Academy">AI Academy</SelectItem>
-                      <SelectItem value="Otro Desarrollo">Otro Desarrollo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-
-                <TableCell className="py-4">
-                  <Select
-                    value={lead.stage}
-                    onValueChange={(value) => handleStageChange(lead, value as LeadStage)}
-                  >
-                    <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none bg-transparent">
-                      <Badge
-                        variant={getStageColor(lead.stage)}
-                        className="cursor-pointer hover:scale-105 transition-transform"
-                      >
-                        {STAGE_LABELS[lead.stage]}
-                      </Badge>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STAGE_ORDER.map((stage) => (
-                        <SelectItem key={stage} value={stage}>
-                          {STAGE_LABELS[stage]}
+                      {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </TableCell>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subchannel">Subcanal</Label>
+                  <Select
+                    value={newLead.subchannel}
+                    onValueChange={(value) => setNewLead({ ...newLead, subchannel: value as LeadSubchannel })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(SUBCHANNEL_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateLead} disabled={!newLead.company_name.trim()}>
+                  Crear Lead
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-                <TableCell className="py-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium">
-                      {formatDateToBogota(lead.created_at, 'dd/MM/yyyy')}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Etapa: {formatDateToBogota(lead.stage_entered_at, 'dd/MM HH:mm')}
-                    </div>
-                  </div>
-                </TableCell>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Select value={stageFilter} onValueChange={setStageFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Etapa" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las etapas</SelectItem>
+            {STAGE_ORDER.map((stage) => (
+              <SelectItem key={stage} value={stage}>
+                {STAGE_LABELS[stage]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={channelFilter} onValueChange={setChannelFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Canal" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los canales</SelectItem>
+            {Object.entries(CHANNEL_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-                <TableCell className="py-4">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    <div className="text-sm font-medium">
-                      {formatDistanceToBogota(lead.last_activity_at)}
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell className="py-4">
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                      className="h-8 w-8 p-0 hover:bg-primary/10 hover:border-primary/30"
-                    >
-                      <Link to={`/leads/${lead.id}`}>
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 w-8 p-0 hover:bg-secondary/80"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 hover:bg-muted"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
+      {/* Table */}
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Empresa</TableHead>
+              <TableHead>Contacto</TableHead>
+              <TableHead>Canal</TableHead>
+              <TableHead>Etapa</TableHead>
+              <TableHead>Última actividad</TableHead>
+              <TableHead className="w-10"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredLeads.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No se encontraron leads
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredLeads.map((lead) => (
+                <TableRow key={lead.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{lead.company_name}</p>
+                      {lead.email && (
+                        <p className="text-xs text-muted-foreground">{lead.email}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {lead.contact_name ? (
+                      <div>
+                        <p className="text-sm">{lead.contact_name}</p>
+                        {lead.phone && (
+                          <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {CHANNEL_LABELS[lead.channel]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={lead.stage}
+                      onValueChange={(value) => updateLeadStage(lead.id, value as LeadStage)}
+                    >
+                      <SelectTrigger className="h-7 w-auto border-0 p-0 shadow-none">
+                        <Badge variant={getStageVariant(lead.stage)} className="text-xs">
+                          {STAGE_LABELS[lead.stage]}
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STAGE_ORDER.map((stage) => (
+                          <SelectItem key={stage} value={stage}>
+                            {STAGE_LABELS[stage]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDistanceToBogota(lead.last_activity_at)}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <Link to={`/leads/${lead.id}`}>
+                        <ExternalLink className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
-      </Card>
-
-      {/* Lead Creation Modal */}
-      <LeadCreateModal
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSave={handleCreateLead}
-      />
-
-      {/* Deal Modal */}
-      <DealModal
-        open={dealModalOpen}
-        onClose={handleDealModalClose}
-        onSave={handleDealSave}
-        leadCompanyName={selectedLeadForDeal?.company_name || ''}
-      />
+      </div>
     </div>
   );
 }

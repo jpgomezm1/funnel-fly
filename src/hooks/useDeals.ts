@@ -34,6 +34,10 @@ export function useDeals(leadId?: string) {
       leadId: string;
       dealId?: string;
       dealData: {
+        currency: 'USD' | 'COP';
+        mrr_original: number;
+        implementation_fee_original: number;
+        exchange_rate?: number;
         mrr_usd: number;
         implementation_fee_usd: number;
         start_date: string;
@@ -41,17 +45,23 @@ export function useDeals(leadId?: string) {
         notes?: string;
       };
     }) => {
+      const payload = {
+        currency: dealData.currency,
+        mrr_original: dealData.mrr_original,
+        implementation_fee_original: dealData.implementation_fee_original,
+        exchange_rate: dealData.exchange_rate || null,
+        mrr_usd: dealData.mrr_usd,
+        implementation_fee_usd: dealData.implementation_fee_usd,
+        start_date: dealData.start_date,
+        status: dealData.status,
+        notes: dealData.notes,
+      };
+
       if (dealId) {
         // Update existing deal
         const { error } = await supabase
           .from('deals')
-          .update({
-            mrr_usd: dealData.mrr_usd,
-            implementation_fee_usd: dealData.implementation_fee_usd,
-            start_date: dealData.start_date,
-            status: dealData.status,
-            notes: dealData.notes,
-          })
+          .update(payload)
           .eq('id', dealId);
 
         if (error) throw error;
@@ -61,11 +71,7 @@ export function useDeals(leadId?: string) {
           .from('deals')
           .insert({
             lead_id: leadId,
-            mrr_usd: dealData.mrr_usd,
-            implementation_fee_usd: dealData.implementation_fee_usd,
-            start_date: dealData.start_date,
-            status: dealData.status,
-            notes: dealData.notes,
+            ...payload,
           });
 
         if (error) throw error;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Lead, LeadStage, LeadStageHistory } from '@/types/database';
+import { Lead, LeadStage, LeadStageHistory, LeadContact } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
 import { useEmailNotifications } from './useEmailNotifications';
 
@@ -274,3 +275,108 @@ export const useLeadHistory = (leadId: string) => {
 
   return { history, loading };
 };
+
+// Hook for lead contacts
+export function useLeadContacts(leadId?: string) {
+  const queryClient = useQueryClient();
+
+  const { data: contacts = [], isLoading, error } = useQuery({
+    queryKey: ['lead-contacts', leadId],
+    queryFn: async () => {
+      if (!leadId) return [];
+
+      const { data, error } = await supabase
+        .from('lead_contacts')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data as LeadContact[];
+    },
+    enabled: !!leadId,
+  });
+
+  // Create contact
+  const createContactMutation = useMutation({
+    mutationFn: async (contactData: Omit<LeadContact, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('lead_contacts')
+        .insert(contactData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as LeadContact;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-contacts', leadId] });
+    },
+  });
+
+  // Update contact
+  const updateContactMutation = useMutation({
+    mutationFn: async ({ contactId, updates }: { contactId: string; updates: Partial<LeadContact> }) => {
+      const { error } = await supabase
+        .from('lead_contacts')
+        .update(updates)
+        .eq('id', contactId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-contacts', leadId] });
+    },
+  });
+
+  // Delete contact
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const { error } = await supabase
+        .from('lead_contacts')
+        .delete()
+        .eq('id', contactId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-contacts', leadId] });
+    },
+  });
+
+  // Set contact as primary
+  const setPrimaryMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      // First, set all contacts as non-primary
+      await supabase
+        .from('lead_contacts')
+        .update({ is_primary: false })
+        .eq('lead_id', leadId);
+
+      // Then set the selected one as primary
+      const { error } = await supabase
+        .from('lead_contacts')
+        .update({ is_primary: true })
+        .eq('id', contactId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-contacts', leadId] });
+    },
+  });
+
+  return {
+    contacts,
+    isLoading,
+    error,
+    createContact: createContactMutation.mutateAsync,
+    updateContact: updateContactMutation.mutateAsync,
+    deleteContact: deleteContactMutation.mutateAsync,
+    setPrimaryContact: setPrimaryMutation.mutateAsync,
+    isCreating: createContactMutation.isPending,
+    isUpdating: updateContactMutation.isPending,
+    isDeleting: deleteContactMutation.isPending,
+  };
+}

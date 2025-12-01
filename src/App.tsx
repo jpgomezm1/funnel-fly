@@ -6,13 +6,27 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import Funnel from "./pages/Funnel";
-import Leads from "./pages/Leads";
-import Dashboard from "./pages/Dashboard";
-import Goals from "./pages/Goals";
-import LeadDetail from "./pages/LeadDetail";
-import Reporting from "./pages/Reporting";
+import Empresas from "./pages/Empresas";
+import EmpresaDetail from "./pages/EmpresaDetail";
+import ProjectDetail from "./pages/ProjectDetail";
+import Analytics from "./pages/Analytics";
+import ActiveClients from "./pages/ActiveClients";
+import ClientDetail from "./pages/ClientDetail";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+// Marketing
+import HubAnalytics from "./pages/marketing/HubAnalytics";
+import Webinars from "./pages/marketing/Webinars";
+import WebinarDetail from "./pages/marketing/WebinarDetail";
+import SocialMedia from "./pages/marketing/SocialMedia";
+// Tech
+import TechProjects from "./pages/tech/TechProjects";
+import TechProjectDetail from "./pages/tech/TechProjectDetail";
+import TechMetrics from "./pages/tech/TechMetrics";
+// Finance
+import FinanceDashboard from "./pages/finance/FinanceDashboard";
+import FinanceIncome from "./pages/finance/FinanceIncome";
+import FinanceExpenses from "./pages/finance/FinanceExpenses";
 
 const queryClient = new QueryClient();
 
@@ -52,11 +66,29 @@ const App = () => (
                 <AppLayout>
                   <Routes>
                     <Route path="/" element={<Funnel />} />
-                    <Route path="/leads" element={<Leads />} />
-                    <Route path="/leads/:id" element={<LeadDetail />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/goals" element={<Goals />} />
-                    <Route path="/reporting" element={<Reporting />} />
+                    <Route path="/empresas" element={<Empresas />} />
+                    <Route path="/empresas/:empresaId" element={<EmpresaDetail />} />
+                    <Route path="/empresas/:empresaId/proyectos/:projectId" element={<ProjectDetail />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/clients" element={<ActiveClients />} />
+                    <Route path="/clients/:id" element={<ClientDetail />} />
+                    <Route path="/clients/:clientId/proyectos/:projectId" element={<ProjectDetail />} />
+                    {/* Tech routes */}
+                    <Route path="/tech/projects" element={<TechProjects />} />
+                    <Route path="/tech/projects/:projectId" element={<TechProjectDetail />} />
+                    <Route path="/tech/metrics" element={<TechMetrics />} />
+                    {/* Marketing routes */}
+                    <Route path="/marketing/hub" element={<HubAnalytics />} />
+                    <Route path="/marketing/webinars" element={<Webinars />} />
+                    <Route path="/marketing/webinars/:id" element={<WebinarDetail />} />
+                    <Route path="/marketing/social" element={<SocialMedia />} />
+                    {/* Finance routes */}
+                    <Route path="/finance" element={<FinanceDashboard />} />
+                    <Route path="/finance/income" element={<FinanceIncome />} />
+                    <Route path="/finance/expenses" element={<FinanceExpenses />} />
+                    {/* Legacy routes - redirect to empresas */}
+                    <Route path="/leads" element={<Empresas />} />
+                    <Route path="/leads/:id" element={<EmpresaDetail />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AppLayout>
