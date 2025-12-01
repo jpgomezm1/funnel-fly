@@ -14,6 +14,7 @@ import ActiveClients from "./pages/ActiveClients";
 import ClientDetail from "./pages/ClientDetail";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Home from "./pages/Home";
 // Marketing
 import HubAnalytics from "./pages/marketing/HubAnalytics";
 import Webinars from "./pages/marketing/Webinars";
@@ -65,7 +66,8 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Routes>
-                    <Route path="/" element={<Funnel />} />
+                    <Route path="/" element={<Home />} />
+                    <Route path="/funnel" element={<Funnel />} />
                     <Route path="/empresas" element={<Empresas />} />
                     <Route path="/empresas/:empresaId" element={<EmpresaDetail />} />
                     <Route path="/empresas/:empresaId/proyectos/:projectId" element={<ProjectDetail />} />

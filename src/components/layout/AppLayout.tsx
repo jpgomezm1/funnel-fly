@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { AIChatWidget } from '@/components/ai-assistant';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -50,7 +51,7 @@ const modules: NavModule[] = [
     icon: TrendingUp,
     color: 'text-emerald-500',
     items: [
-      { name: 'Funnel', href: '/', icon: KanbanSquare },
+      { name: 'Funnel', href: '/funnel', icon: KanbanSquare },
       { name: 'Empresas', href: '/empresas', icon: Building2 },
       { name: 'Clientes', href: '/clients', icon: Handshake },
       { name: 'Analytics', href: '/analytics', icon: BarChart3 },
@@ -116,8 +117,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const isItemActive = (href: string) => {
-    // Exact match for root and specific dashboard routes
-    if (href === '/' || href === '/finance' || href === '/analytics') {
+    // Exact match for specific dashboard routes
+    if (href === '/finance' || href === '/analytics' || href === '/funnel') {
       return location.pathname === href;
     }
     // For other routes, check exact match or if it's a sub-route
@@ -151,14 +152,18 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
+          {/* Logo - links to Home */}
+          <Link
+            to="/"
+            className="h-16 flex items-center justify-center border-b border-sidebar-border hover:bg-sidebar-accent/30 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+          >
             <img
               src="https://academy.stayirrelevant.com/assets/irrelevant-logo-B9hN0rDI.png"
               alt="Irrelevant"
               className="h-7 w-auto"
             />
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-6 overflow-y-auto">
@@ -271,6 +276,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* AI Assistant Widget */}
+      <AIChatWidget />
     </div>
   );
 }
