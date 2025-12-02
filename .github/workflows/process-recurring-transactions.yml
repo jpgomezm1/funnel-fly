@@ -1,0 +1,95 @@
+# GitHub Actions workflow to process recurring transactions
+# This is an alternative to pg_cron for Supabase Free tier users
+
+name: Process Recurring Transactions
+
+on:
+  # Run on schedule - twice a month
+  schedule:
+    # At 06:00 UTC on the 15th of every month (1:00 AM Colombia)
+    - cron: '0 6 15 * *'
+    # At 06:00 UTC on the 28th of every month
+    - cron: '0 6 28 * *'
+    # At 06:00 UTC on the 1st of every month (catch-up)
+    - cron: '0 6 1 * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Year to process (optional, defaults to current)'
+        required: false
+        type: number
+      month:
+        description: 'Month to process (optional, defaults to current)'
+        required: false
+        type: number
+
+jobs:
+  process-recurring:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Process Recurring Transactions
+        run: |
+          # Build request body
+          if [ -n "${{ inputs.year }}" ] || [ -n "${{ inputs.month }}" ]; then
+            BODY='{"year": ${{ inputs.year || 'null' }}, "month": ${{ inputs.month || 'null' }}, "triggered_by": "github_actions"}'
+          else
+            BODY='{"triggered_by": "github_actions"}'
+          fi
+
+          # Call the Edge Function
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/process-recurring-transactions")
+
+          # Extract HTTP status code
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "Response: $BODY"
+          echo "HTTP Code: $HTTP_CODE"
+
+          # Check if successful
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Error: Function returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          # Parse and display results
+          CREATED=$(echo "$BODY" | jq -r '.transactions_created // 0')
+          PROCESSED=$(echo "$BODY" | jq -r '.transactions_processed // 0')
+
+          echo "========================================"
+          echo "Recurring Transactions Processing Complete"
+          echo "========================================"
+          echo "Transactions Processed: $PROCESSED"
+          echo "Transactions Created: $CREATED"
+          echo "========================================"
+
+      - name: Process Previous Month (on 1st of month)
+        if: github.event.schedule == '0 6 1 * *'
+        run: |
+          # Calculate previous month
+          PREV_MONTH=$(date -d "last month" +%m | sed 's/^0//')
+          PREV_YEAR=$(date -d "last month" +%Y)
+
+          echo "Processing previous month: $PREV_YEAR-$PREV_MONTH"
+
+          BODY="{\"year\": $PREV_YEAR, \"month\": $PREV_MONTH, \"triggered_by\": \"github_actions_catchup\"}"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/process-recurring-transactions")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "Previous month processing response: $BODY"
