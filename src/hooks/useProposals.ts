@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Proposal, DealCurrency } from '@/types/database';
+import { Proposal, DealCurrency, ProposalStatus } from '@/types/database';
 
 export function useProposals(projectId?: string) {
   const queryClient = useQueryClient();
@@ -14,7 +14,7 @@ export function useProposals(projectId?: string) {
         .from('proposals')
         .select('*')
         .eq('project_id', projectId)
-        .order('created_at', { ascending: false });
+        .order('version', { ascending: false });
 
       if (error) throw error;
       return data as Proposal[];
@@ -34,12 +34,27 @@ export function useProposals(projectId?: string) {
       mrr_usd: number;
       fee_usd: number;
       notes?: string;
+      status?: ProposalStatus;
     }) => {
+      // Get current max version for this project
+      const { data: existingProposals } = await supabase
+        .from('proposals')
+        .select('version')
+        .eq('project_id', proposalData.project_id)
+        .order('version', { ascending: false })
+        .limit(1);
+
+      const nextVersion = existingProposals && existingProposals.length > 0
+        ? (existingProposals[0].version || 0) + 1
+        : 1;
+
       const { data, error } = await supabase
         .from('proposals')
         .insert({
           ...proposalData,
           is_final: false,
+          status: proposalData.status || 'DRAFT',
+          version: nextVersion,
         })
         .select()
         .single();

@@ -14,6 +14,7 @@ export const hubSupabase = HUB_SUPABASE_URL && HUB_SUPABASE_SERVICE_KEY
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+        storageKey: 'hub-supabase-auth',
       },
     })
   : null;

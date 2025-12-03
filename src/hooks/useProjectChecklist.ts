@@ -211,6 +211,7 @@ export function useProjectChecklist({ projectId }: UseProjectChecklistOptions) {
   // Get items grouped by category
   const getItemsByCategory = () => {
     const grouped: Record<ChecklistCategory, ProjectChecklistItem[]> = {
+      negotiation: [],
       kickoff: [],
       development: [],
       testing: [],
@@ -226,6 +227,11 @@ export function useProjectChecklist({ projectId }: UseProjectChecklistOptions) {
     });
 
     return grouped;
+  };
+
+  // Get only negotiation items
+  const getNegotiationItems = () => {
+    return items.filter(i => i.category === 'negotiation');
   };
 
   // Get pending items (not completed, sorted by due date)
@@ -271,6 +277,7 @@ export function useProjectChecklist({ projectId }: UseProjectChecklistOptions) {
     getWeightedProgress,
     getProgressByCategory,
     getItemsByCategory,
+    getNegotiationItems,
     getPendingItems,
     getOverdueItems,
     isCreating: createItemMutation.isPending,

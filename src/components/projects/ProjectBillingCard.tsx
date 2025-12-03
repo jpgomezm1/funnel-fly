@@ -51,12 +51,7 @@ export function ProjectBillingCard({ projectId, deal, onRefetch }: ProjectBillin
   const {
     invoices,
     isLoading,
-    createInvoice,
-    markAsInvoiced,
-    markAsPaid,
-    generateRecurringInvoices,
     getInvoiceSummary,
-    isCreating,
   } = useProjectInvoices({ projectId });
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -64,7 +59,6 @@ export function ProjectBillingCard({ projectId, deal, onRefetch }: ProjectBillin
   const [markAsPaidModalOpen, setMarkAsPaidModalOpen] = useState(false);
   const [uploadInvoiceModalOpen, setUploadInvoiceModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [generatingInvoices, setGeneratingInvoices] = useState(false);
 
   const summary = getInvoiceSummary();
 
@@ -81,27 +75,6 @@ export function ProjectBillingCard({ projectId, deal, onRefetch }: ProjectBillin
   const handleUploadInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setUploadInvoiceModalOpen(true);
-  };
-
-  const handleGenerateRecurring = async () => {
-    setGeneratingInvoices(true);
-    try {
-      const upToMonth = new Date();
-      upToMonth.setMonth(upToMonth.getMonth() + 1); // Generate up to next month
-
-      const count = await generateRecurringInvoices(deal, upToMonth);
-
-      if (count > 0) {
-        alert(`Se generaron ${count} factura(s) de mensualidad`);
-      } else {
-        alert('No hay nuevas facturas por generar');
-      }
-    } catch (error) {
-      console.error('Error generating invoices:', error);
-      alert('Error al generar facturas');
-    } finally {
-      setGeneratingInvoices(false);
-    }
   };
 
   const handleViewFile = async (filePath: string) => {
@@ -319,19 +292,6 @@ export function ProjectBillingCard({ projectId, deal, onRefetch }: ProjectBillin
               Facturación
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleGenerateRecurring}
-                disabled={generatingInvoices}
-              >
-                {generatingInvoices ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : (
-                  <Calendar className="h-3.5 w-3.5 mr-1" />
-                )}
-                Generar Mensualidades
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm">
@@ -417,24 +377,15 @@ export function ProjectBillingCard({ projectId, deal, onRefetch }: ProjectBillin
                 <div className="text-center py-8">
                   <Receipt className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Sin facturas registradas</p>
-                  <div className="flex justify-center gap-2 mt-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenCreateModal('IMPLEMENTATION')}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      Fee Implementación
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleGenerateRecurring}
-                    >
-                      <Calendar className="h-3.5 w-3.5 mr-1" />
-                      Generar Mensualidades
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => handleOpenCreateModal('IMPLEMENTATION')}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Crear Primer Cobro
+                  </Button>
                 </div>
               ) : (
                 invoices.map(renderInvoiceRow)
@@ -492,10 +443,10 @@ export function ProjectBillingCard({ projectId, deal, onRefetch }: ProjectBillin
                     size="sm"
                     variant="outline"
                     className="mt-4"
-                    onClick={handleGenerateRecurring}
+                    onClick={() => handleOpenCreateModal('RECURRING')}
                   >
-                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                    Generar Mensualidades
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Crear Mensualidad
                   </Button>
                 </div>
               ) : (

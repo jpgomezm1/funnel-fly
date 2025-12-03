@@ -19,22 +19,53 @@ export function useCompanyDocuments({ leadId, clientId }: UseCompanyDocumentsOpt
     queryFn: async () => {
       if (!entityId) return [];
 
-      const query = supabase
-        .from('company_documents')
-        .select('*')
-        .order('document_type', { ascending: true })
-        .order('created_at', { ascending: false });
-
       if (leadId) {
-        query.eq('lead_id', leadId);
+        // Simple case: fetch by lead_id
+        const { data, error } = await supabase
+          .from('company_documents')
+          .select('*')
+          .eq('lead_id', leadId)
+          .order('document_type', { ascending: true })
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as CompanyDocument[];
       } else if (clientId) {
-        query.eq('client_id', clientId);
+        // For clients, we need to also check documents linked to original lead
+        // First, get the client's original_lead_id
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('original_lead_id')
+          .eq('id', clientId)
+          .single();
+
+        // Build query - fetch documents for client_id OR original lead_id
+        if (clientData?.original_lead_id) {
+          // Fetch both client and lead documents
+          const { data, error } = await supabase
+            .from('company_documents')
+            .select('*')
+            .or(`client_id.eq.${clientId},lead_id.eq.${clientData.original_lead_id}`)
+            .order('document_type', { ascending: true })
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+          return data as CompanyDocument[];
+        } else {
+          // No original lead, just fetch by client_id
+          const { data, error } = await supabase
+            .from('company_documents')
+            .select('*')
+            .eq('client_id', clientId)
+            .order('document_type', { ascending: true })
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+          return data as CompanyDocument[];
+        }
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as CompanyDocument[];
+      return [] as CompanyDocument[];
     },
     enabled: !!entityId,
   });
@@ -98,7 +129,8 @@ export function useCompanyDocuments({ leadId, clientId }: UseCompanyDocumentsOpt
       return data as CompanyDocument;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-documents', entityType, entityId] });
+      // Invalidate all company-documents queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['company-documents'] });
     },
   });
 
@@ -124,7 +156,8 @@ export function useCompanyDocuments({ leadId, clientId }: UseCompanyDocumentsOpt
       if (dbError) throw dbError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-documents', entityType, entityId] });
+      // Invalidate all company-documents queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['company-documents'] });
     },
   });
 

@@ -81,9 +81,9 @@ export function useTechProjects() {
           repositories: reposData?.filter(r => r.project_id === project.id) || [],
           taskStats: {
             total: projectTasks.length,
-            completed: projectTasks.filter(t => t.status === 'DONE').length,
-            inProgress: projectTasks.filter(t => t.status === 'IN_PROGRESS').length,
-            blocked: projectTasks.filter(t => t.status === 'BLOCKED').length,
+            completed: projectTasks.filter(t => t.status === 'done').length,
+            inProgress: projectTasks.filter(t => t.status === 'in_progress').length,
+            blocked: projectTasks.filter(t => t.status === 'blocked').length,
           },
           totalHours: projectHours,
         };
@@ -188,9 +188,9 @@ export function useTechProject(projectId?: string) {
         repositories: reposData || [],
         taskStats: {
           total: tasks.length,
-          completed: tasks.filter(t => t.status === 'DONE').length,
-          inProgress: tasks.filter(t => t.status === 'IN_PROGRESS').length,
-          blocked: tasks.filter(t => t.status === 'BLOCKED').length,
+          completed: tasks.filter(t => t.status === 'done').length,
+          inProgress: tasks.filter(t => t.status === 'in_progress').length,
+          blocked: tasks.filter(t => t.status === 'blocked').length,
         },
         totalHours,
       } as ProjectWithTechDetails & {

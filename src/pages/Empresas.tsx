@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useLeads } from '@/hooks/useLeads';
 import { useClients } from '@/hooks/useClients';
 import {
@@ -25,6 +26,7 @@ import {
   STAGE_LABELS,
   CHANNEL_LABELS,
   SUBCHANNEL_LABELS,
+  CHANNEL_SUBCHANNELS,
 } from '@/types/database';
 import { formatDistanceToBogota } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
@@ -84,10 +86,9 @@ export default function Empresas() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newLead, setNewLead] = useState({
     company_name: '',
-    contact_name: '',
-    contact_role: '',
-    phone: '',
-    email: '',
+    description: '',
+    linkedin_url: '',
+    website_url: '',
     channel: 'OUTBOUND_APOLLO' as LeadChannel,
     subchannel: 'NINGUNO' as LeadSubchannel,
     owner_id: '',
@@ -295,44 +296,43 @@ export default function Empresas() {
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="company_name">Empresa *</Label>
-                  <Input
-                    id="company_name"
-                    placeholder="Nombre de la empresa"
-                    value={newLead.company_name}
-                    onChange={(e) => setNewLead({ ...newLead, company_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contact_name">Contacto</Label>
-                  <Input
-                    id="contact_name"
-                    placeholder="Nombre del contacto"
-                    value={newLead.contact_name}
-                    onChange={(e) => setNewLead({ ...newLead, contact_name: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="company_name">Nombre de la Empresa *</Label>
+                <Input
+                  id="company_name"
+                  placeholder="Nombre de la empresa"
+                  value={newLead.company_name}
+                  onChange={(e) => setNewLead({ ...newLead, company_name: e.target.value })}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe a qué se dedica la empresa, industria, tamaño, etc."
+                  value={newLead.description}
+                  onChange={(e) => setNewLead({ ...newLead, description: e.target.value })}
+                  className="min-h-[80px] resize-none"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefono</Label>
+                  <Label htmlFor="linkedin_url">LinkedIn</Label>
                   <Input
-                    id="phone"
-                    placeholder="+57 300 123 4567"
-                    value={newLead.phone}
-                    onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })}
+                    id="linkedin_url"
+                    placeholder="https://linkedin.com/company/..."
+                    value={newLead.linkedin_url}
+                    onChange={(e) => setNewLead({ ...newLead, linkedin_url: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="website_url">Sitio Web</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="contacto@empresa.com"
-                    value={newLead.email}
-                    onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
+                    id="website_url"
+                    placeholder="https://ejemplo.com"
+                    value={newLead.website_url}
+                    onChange={(e) => setNewLead({ ...newLead, website_url: e.target.value })}
                   />
                 </div>
               </div>
@@ -341,7 +341,11 @@ export default function Empresas() {
                   <Label htmlFor="channel">Canal</Label>
                   <Select
                     value={newLead.channel}
-                    onValueChange={(value) => setNewLead({ ...newLead, channel: value as LeadChannel })}
+                    onValueChange={(value) => setNewLead({
+                      ...newLead,
+                      channel: value as LeadChannel,
+                      subchannel: 'NINGUNO' // Reset subchannel when channel changes
+                    })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -355,24 +359,27 @@ export default function Empresas() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subchannel">Subcanal</Label>
-                  <Select
-                    value={newLead.subchannel}
-                    onValueChange={(value) => setNewLead({ ...newLead, subchannel: value as LeadSubchannel })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(SUBCHANNEL_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Solo mostrar subcanal si el canal tiene subcanales disponibles */}
+                {CHANNEL_SUBCHANNELS[newLead.channel]?.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="subchannel">Subcanal</Label>
+                    <Select
+                      value={newLead.subchannel}
+                      onValueChange={(value) => setNewLead({ ...newLead, subchannel: value as LeadSubchannel })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CHANNEL_SUBCHANNELS[newLead.channel].map((subchannelValue) => (
+                          <SelectItem key={subchannelValue} value={subchannelValue}>
+                            {SUBCHANNEL_LABELS[subchannelValue]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="owner">Propietario</Label>

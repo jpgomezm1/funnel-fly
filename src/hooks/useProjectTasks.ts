@@ -56,8 +56,8 @@ export function useProjectTasks(projectId?: string) {
         .from('project_tasks')
         .insert({
           ...taskData,
-          status: taskData.status || 'BACKLOG',
-          priority: taskData.priority || 'MEDIUM',
+          status: taskData.status || 'backlog',
+          priority: taskData.priority || 'medium',
           order_index: nextOrder,
           actual_hours: 0,
         })

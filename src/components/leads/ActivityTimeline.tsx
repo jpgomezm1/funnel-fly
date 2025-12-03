@@ -1,18 +1,42 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowRight, DollarSign, Plus, Edit, FileText, Clock } from 'lucide-react';
-import { TimelineEvent } from '@/hooks/useLeadTimeline';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, DollarSign, Plus, Edit, FileText, Clock, Phone, Mail, Calendar, MessageSquare, Download } from 'lucide-react';
+import { TimelineEvent, ActivityType } from '@/hooks/useLeadTimeline';
 import { formatDateToBogota } from '@/lib/date-utils';
 import { STAGE_LABELS } from '@/types/database';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ActivityTimelineProps {
   timeline: TimelineEvent[];
   isLoading: boolean;
 }
 
+const ACTIVITY_ICONS: Record<ActivityType, React.ElementType> = {
+  call: Phone,
+  email: Mail,
+  meeting: Calendar,
+  note: MessageSquare,
+  quote: FileText,
+  follow_up: Clock,
+};
+
+const ACTIVITY_COLORS: Record<ActivityType, string> = {
+  call: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+  email: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+  meeting: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+  note: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  quote: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+  follow_up: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+};
+
 export function ActivityTimeline({ timeline, isLoading }: ActivityTimelineProps) {
-  const getEventIcon = (type: TimelineEvent['type']) => {
+  const getEventIcon = (type: TimelineEvent['type'], activityType?: ActivityType) => {
+    if (type === 'activity' && activityType) {
+      const IconComponent = ACTIVITY_ICONS[activityType] || Clock;
+      return <IconComponent className="h-3 w-3" />;
+    }
     switch (type) {
       case 'stage_change':
         return <ArrowRight className="h-3 w-3" />;
@@ -29,7 +53,10 @@ export function ActivityTimeline({ timeline, isLoading }: ActivityTimelineProps)
     }
   };
 
-  const getEventColor = (type: TimelineEvent['type']) => {
+  const getEventColor = (type: TimelineEvent['type'], activityType?: ActivityType) => {
+    if (type === 'activity' && activityType) {
+      return ACTIVITY_COLORS[activityType] || 'bg-slate-100 text-slate-500';
+    }
     switch (type) {
       case 'stage_change':
         return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400';
@@ -43,6 +70,28 @@ export function ActivityTimeline({ timeline, isLoading }: ActivityTimelineProps)
         return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
       default:
         return 'bg-slate-100 text-slate-500';
+    }
+  };
+
+  const handleDownloadTranscript = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('activity-transcripts')
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filePath.split('/').pop() || 'transcript';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading transcript:', error);
     }
   };
 
@@ -83,8 +132,8 @@ export function ActivityTimeline({ timeline, isLoading }: ActivityTimelineProps)
                   <div key={event.id} className="flex gap-3">
                     {/* Icon */}
                     <div className="flex flex-col items-center">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getEventColor(event.type)}`}>
-                        {getEventIcon(event.type)}
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getEventColor(event.type, event.details?.activity_type)}`}>
+                        {getEventIcon(event.type, event.details?.activity_type)}
                       </div>
                       {index < timeline.length - 1 && (
                         <div className="w-px h-full bg-border mt-1 min-h-[16px]" />
@@ -100,6 +149,28 @@ export function ActivityTimeline({ timeline, isLoading }: ActivityTimelineProps)
                       </div>
 
                       <p className="text-sm">{event.description}</p>
+
+                      {/* Activity details */}
+                      {event.type === 'activity' && (
+                        <div className="mt-2 space-y-1">
+                          {event.details?.activity_details && (
+                            <p className="text-xs text-muted-foreground">
+                              {event.details.activity_details}
+                            </p>
+                          )}
+                          {event.details?.transcript_file_path && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs gap-1"
+                              onClick={() => handleDownloadTranscript(event.details!.transcript_file_path!)}
+                            >
+                              <Download className="h-3 w-3" />
+                              Descargar transcript
+                            </Button>
+                          )}
+                        </div>
+                      )}
 
                       {/* Stage change details */}
                       {event.type === 'stage_change' && event.details?.from_stage && event.details?.to_stage && (

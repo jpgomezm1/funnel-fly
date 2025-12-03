@@ -93,6 +93,9 @@ export const useLeads = () => {
       // Asegurar que los campos obligatorios tengan valores por defecto
       const leadToInsert = {
         company_name: leadData.company_name,
+        description: leadData.description || null,
+        linkedin_url: leadData.linkedin_url || null,
+        website_url: leadData.website_url || null,
         contact_name: leadData.contact_name || null,
         contact_role: leadData.contact_role || null,
         phone: leadData.phone || null,

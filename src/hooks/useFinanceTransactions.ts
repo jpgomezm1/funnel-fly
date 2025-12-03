@@ -7,8 +7,45 @@ import {
   ExpenseCategory,
   ExpenseClassification,
   PaymentMethod,
+  RecurringFrequency,
   getExpenseClassification,
 } from '@/types/database';
+
+const RECEIPT_BUCKET = 'finance-receipts';
+
+// Upload receipt file to Supabase storage
+export async function uploadReceiptFile(file: File, transactionType: FinanceTransactionType): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${transactionType.toLowerCase()}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+  const { error } = await supabase.storage
+    .from(RECEIPT_BUCKET)
+    .upload(fileName, file);
+
+  if (error) throw error;
+  return fileName;
+}
+
+// Delete receipt file from Supabase storage
+export async function deleteReceiptFile(filePath: string): Promise<void> {
+  const { error } = await supabase.storage
+    .from(RECEIPT_BUCKET)
+    .remove([filePath]);
+
+  if (error) throw error;
+}
+
+// Get signed URL for receipt file
+export async function getReceiptUrl(filePath: string): Promise<string | null> {
+  if (!filePath) return null;
+
+  const { data, error } = await supabase.storage
+    .from(RECEIPT_BUCKET)
+    .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+  if (error) return null;
+  return data.signedUrl;
+}
 
 interface TransactionFilters {
   type?: FinanceTransactionType;
@@ -32,6 +69,7 @@ interface CreateTransactionData {
   reference_number?: string;
   transaction_date: string;
   is_recurring?: boolean;
+  recurring_frequency?: RecurringFrequency;
   recurring_day?: number;
   recurring_end_date?: string;
   payment_method?: PaymentMethod;
@@ -96,21 +134,130 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
         expense_classification = getExpenseClassification(data.expense_category);
       }
 
-      const insertData = {
+      const baseData = {
         ...data,
         amount_usd,
         expense_classification,
         is_recurring: data.is_recurring || false,
       };
 
-      const { data: result, error } = await supabase
-        .from('finance_transactions')
-        .insert(insertData)
-        .select()
-        .single();
+      // If recurring, generate all past occurrences
+      // For MONTHLY: recurring_day is required
+      // For BIWEEKLY: uses transaction_date as start, recurring_day not required
+      const frequency = data.recurring_frequency || 'MONTHLY';
+      const canGenerateRecurring = data.is_recurring && (frequency === 'BIWEEKLY' || data.recurring_day);
 
-      if (error) throw error;
-      return result as FinanceTransaction;
+      if (canGenerateRecurring) {
+        const startDate = new Date(data.transaction_date + 'T12:00:00'); // Noon to avoid timezone issues
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+
+        // Use end date if provided, otherwise use today
+        let endDate = today;
+        if (data.recurring_end_date) {
+          // Trust the user's end date - they may be registering completed recurring expenses
+          endDate = new Date(data.recurring_end_date + 'T23:59:59');
+        }
+
+        const occurrences: typeof baseData[] = [];
+        const targetDay = data.recurring_day;
+
+        // Safety limit to prevent infinite loops
+        const maxIterations = frequency === 'BIWEEKLY' ? 240 : 120; // More iterations for biweekly
+        let iterations = 0;
+
+        // Helper function to format date
+        const formatDate = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        if (frequency === 'BIWEEKLY') {
+          // Biweekly: every 15 days from start date
+          let currentDate = new Date(startDate);
+
+          while (iterations < maxIterations) {
+            // Stop if we've passed the end date
+            if (currentDate > endDate) {
+              break;
+            }
+
+            // Add occurrence
+            occurrences.push({
+              ...baseData,
+              transaction_date: formatDate(currentDate),
+            });
+
+            // Move forward 15 days
+            currentDate = new Date(currentDate);
+            currentDate.setDate(currentDate.getDate() + 15);
+
+            iterations++;
+          }
+        } else {
+          // Monthly: same day each month
+          let currentYear = startDate.getFullYear();
+          let currentMonth = startDate.getMonth();
+
+          while (iterations < maxIterations) {
+            // Get the last day of the current month
+            const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            // Use target day or last day of month if target doesn't exist
+            const dayToUse = Math.min(targetDay, lastDayOfMonth);
+
+            // Set to noon to match startDate time and avoid timezone issues
+            const occurrenceDate = new Date(currentYear, currentMonth, dayToUse, 12, 0, 0);
+
+            // Stop if we've passed the end date
+            if (occurrenceDate > endDate) {
+              break;
+            }
+
+            // Only add if on or after start date
+            if (occurrenceDate >= startDate) {
+              occurrences.push({
+                ...baseData,
+                transaction_date: formatDate(occurrenceDate),
+              });
+            }
+
+            // Move to next month
+            currentMonth++;
+            if (currentMonth > 11) {
+              currentMonth = 0;
+              currentYear++;
+            }
+
+            iterations++;
+          }
+        }
+
+        if (occurrences.length === 0) {
+          throw new Error('No hay ocurrencias para crear');
+        }
+
+        // Insert all occurrences
+        const { data: results, error } = await supabase
+          .from('finance_transactions')
+          .insert(occurrences)
+          .select();
+
+        if (error) throw error;
+        return results[0] as FinanceTransaction;
+      } else {
+        // Single transaction (non-recurring)
+        const { data: result, error } = await supabase
+          .from('finance_transactions')
+          .insert(baseData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return result as FinanceTransaction;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });

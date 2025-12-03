@@ -31,11 +31,7 @@ interface TechProjectEnvTabProps {
   projectId: string;
 }
 
-const ENVIRONMENTS: { key: EnvironmentType; dbKey: string }[] = [
-  { key: 'DEVELOPMENT', dbKey: 'development' },
-  { key: 'STAGING', dbKey: 'staging' },
-  { key: 'PRODUCTION', dbKey: 'production' },
-];
+const ENVIRONMENTS: EnvironmentType[] = ['development', 'staging', 'production'];
 
 export function TechProjectEnvTab({ projectId }: TechProjectEnvTabProps) {
   const {
@@ -54,11 +50,12 @@ export function TechProjectEnvTab({ projectId }: TechProjectEnvTabProps) {
   // Initialize content when data loads
   useEffect(() => {
     const initial: Record<string, string> = {};
-    ENVIRONMENTS.forEach(({ key }) => {
-      initial[key] = getEnvContent(key);
+    ENVIRONMENTS.forEach((env) => {
+      initial[env] = getEnvContent(env);
     });
     setEditedContent(initial);
     setHasChanges({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [envVariables]);
 
   const handleContentChange = (env: EnvironmentType, content: string) => {
@@ -136,8 +133,8 @@ export function TechProjectEnvTab({ projectId }: TechProjectEnvTabProps) {
       </Card>
 
       {/* Environment Accordions */}
-      <Accordion type="multiple" defaultValue={['DEVELOPMENT', 'STAGING', 'PRODUCTION']} className="space-y-2">
-        {ENVIRONMENTS.map(({ key: env }) => {
+      <Accordion type="multiple" defaultValue={['development', 'staging', 'production']} className="space-y-2">
+        {ENVIRONMENTS.map((env) => {
           const content = editedContent[env] || '';
           const varCount = countVariables(content);
           const changed = hasChanges[env];
@@ -148,15 +145,15 @@ export function TechProjectEnvTab({ projectId }: TechProjectEnvTabProps) {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded flex items-center justify-center",
-                    env === 'PRODUCTION' && "bg-red-100",
-                    env === 'STAGING' && "bg-amber-100",
-                    env === 'DEVELOPMENT' && "bg-slate-100"
+                    env === 'production' && "bg-red-100",
+                    env === 'staging' && "bg-amber-100",
+                    env === 'development' && "bg-slate-100"
                   )}>
                     <Server className={cn(
                       "h-4 w-4",
-                      env === 'PRODUCTION' && "text-red-600",
-                      env === 'STAGING' && "text-amber-600",
-                      env === 'DEVELOPMENT' && "text-slate-600"
+                      env === 'production' && "text-red-600",
+                      env === 'staging' && "text-amber-600",
+                      env === 'development' && "text-slate-600"
                     )} />
                   </div>
                   <div className="text-left flex items-center gap-2">

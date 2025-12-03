@@ -202,7 +202,7 @@ export function useClient(clientId?: string) {
   };
 }
 
-// Hook for client contacts
+// Hook for client contacts - also fetches from lead_contacts if client has original_lead_id
 export function useClientContacts(clientId?: string) {
   const queryClient = useQueryClient();
 
@@ -211,15 +211,51 @@ export function useClientContacts(clientId?: string) {
     queryFn: async () => {
       if (!clientId) return [];
 
-      const { data, error } = await supabase
+      // First, fetch client contacts
+      const { data: clientContacts, error: clientContactsError } = await supabase
         .from('client_contacts')
         .select('*')
         .eq('client_id', clientId)
         .order('is_primary', { ascending: false })
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      return data as ClientContact[];
+      if (clientContactsError) throw clientContactsError;
+
+      // If we have client contacts, return them
+      if (clientContacts && clientContacts.length > 0) {
+        return clientContacts as ClientContact[];
+      }
+
+      // If no client contacts, check if client has an original_lead_id
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('original_lead_id')
+        .eq('id', clientId)
+        .single();
+
+      if (clientData?.original_lead_id) {
+        // Fetch contacts from lead_contacts
+        const { data: leadContacts, error: leadContactsError } = await supabase
+          .from('lead_contacts')
+          .select('*')
+          .eq('lead_id', clientData.original_lead_id)
+          .order('is_primary', { ascending: false })
+          .order('created_at', { ascending: true });
+
+        if (leadContactsError) throw leadContactsError;
+
+        // Map lead contacts to client contact format (for display purposes)
+        // Note: These are read-only until migrated
+        if (leadContacts && leadContacts.length > 0) {
+          return leadContacts.map(lc => ({
+            ...lc,
+            client_id: clientId, // Override for display
+            _from_lead: true, // Flag to indicate source (optional)
+          })) as ClientContact[];
+        }
+      }
+
+      return [] as ClientContact[];
     },
     enabled: !!clientId,
   });

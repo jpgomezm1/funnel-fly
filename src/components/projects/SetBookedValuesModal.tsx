@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRightLeft, TrendingUp } from 'lucide-react';
+import { ArrowRightLeft, TrendingUp, Link as LinkIcon, FileText } from 'lucide-react';
 import { DealCurrency } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -28,6 +28,8 @@ export function SetBookedValuesModal({
   const [mrr, setMrr] = useState('');
   const [fee, setFee] = useState('');
   const [exchangeRate, setExchangeRate] = useState('');
+  const [proposalName, setProposalName] = useState('Propuesta Inicial');
+  const [proposalUrl, setProposalUrl] = useState('');
 
   const calculateUsdValues = () => {
     const mrrValue = parseFloat(mrr) || 0;
@@ -67,10 +69,13 @@ export function SetBookedValuesModal({
     const mrrValue = mrr.trim() === '' ? 0 : parseFloat(mrr);
     const feeValue = fee.trim() === '' ? 0 : parseFloat(fee);
     const rateValue = parseFloat(exchangeRate);
+    const mrrUsd = currency === 'USD' ? mrrValue : Math.round((mrrValue / rateValue) * 100) / 100;
+    const feeUsd = currency === 'USD' ? feeValue : Math.round((feeValue / rateValue) * 100) / 100;
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      // Update project with booked values and stage
+      const { error: projectError } = await supabase
         .from('projects')
         .update({
           stage: 'PROPUESTA',
@@ -79,12 +84,32 @@ export function SetBookedValuesModal({
           booked_mrr_original: mrrValue,
           booked_fee_original: feeValue,
           booked_exchange_rate: currency === 'COP' ? rateValue : null,
-          booked_mrr_usd: currency === 'USD' ? mrrValue : Math.round((mrrValue / rateValue) * 100) / 100,
-          booked_fee_usd: currency === 'USD' ? feeValue : Math.round((feeValue / rateValue) * 100) / 100,
+          booked_mrr_usd: mrrUsd,
+          booked_fee_usd: feeUsd,
         })
         .eq('id', projectId);
 
-      if (error) throw error;
+      if (projectError) throw projectError;
+
+      // Create the proposal with the URL
+      const { error: proposalError } = await supabase
+        .from('proposals')
+        .insert({
+          project_id: projectId,
+          name: proposalName.trim() || 'Propuesta Inicial',
+          url: proposalUrl.trim() || null,
+          currency,
+          mrr_original: mrrValue,
+          fee_original: feeValue,
+          exchange_rate: currency === 'COP' ? rateValue : null,
+          mrr_usd: mrrUsd,
+          fee_usd: feeUsd,
+          status: proposalUrl.trim() ? 'SENT' : 'DRAFT',
+          sent_at: proposalUrl.trim() ? new Date().toISOString() : null,
+          version: 1,
+        });
+
+      if (proposalError) throw proposalError;
 
       onSuccess();
       onClose();
@@ -202,6 +227,41 @@ export function SetBookedValuesModal({
               )}
             </div>
           )}
+
+          {/* Proposal Section */}
+          <div className="pt-4 border-t space-y-4">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Propuesta
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="proposalName">Nombre de la Propuesta</Label>
+              <Input
+                id="proposalName"
+                placeholder="Ej: Propuesta Inicial, Propuesta v1..."
+                value={proposalName}
+                onChange={(e) => setProposalName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="proposalUrl" className="flex items-center gap-2">
+                <LinkIcon className="h-3.5 w-3.5" />
+                URL de la Propuesta (opcional)
+              </Label>
+              <Input
+                id="proposalUrl"
+                type="url"
+                placeholder="https://..."
+                value={proposalUrl}
+                onChange={(e) => setProposalUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Si agregas la URL, la propuesta se marcará como "Enviada" automáticamente.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">

@@ -1,29 +1,51 @@
-import { 
-  format, 
-  formatDistanceToNow, 
-  startOfWeek, 
-  endOfWeek, 
-  startOfMonth, 
+import {
+  format,
+  formatDistanceToNow,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
   endOfMonth,
   addWeeks,
   addMonths,
   subWeeks,
-  subMonths
+  subMonths,
+  parseISO
 } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
 
 const BOGOTA_TZ = 'America/Bogota';
 
+/**
+ * Parsea una fecha correctamente, manejando el problema de timezone.
+ * Para strings de solo fecha (YYYY-MM-DD), los trata como fecha local de Bogotá.
+ * Para strings con timestamp o Date objects, los convierte a Bogotá.
+ */
+export const parseDateForBogota = (date: Date | string): Date => {
+  if (date instanceof Date) {
+    return toZonedTime(date, BOGOTA_TZ);
+  }
+
+  // Si es un string de solo fecha (YYYY-MM-DD), parsearlo como local
+  // Esto evita el problema de que "2025-12-03" se convierta en "2025-12-02 19:00" en Bogotá
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    // Agregar T12:00:00 para evitar problemas de timezone (mediodía es seguro)
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
+  }
+
+  // Para timestamps completos, convertir a Bogotá
+  const dateObj = parseISO(date);
+  return toZonedTime(dateObj, BOGOTA_TZ);
+};
+
 export const formatDateToBogota = (date: Date | string, formatStr: string = 'dd/MM/yyyy HH:mm') => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const zonedDate = toZonedTime(dateObj, BOGOTA_TZ);
+  const zonedDate = parseDateForBogota(date);
   return format(zonedDate, formatStr, { locale: es });
 };
 
 export const formatDistanceToBogota = (date: Date | string) => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const zonedDate = toZonedTime(dateObj, BOGOTA_TZ);
+  const zonedDate = parseDateForBogota(date);
   return formatDistanceToNow(zonedDate, { addSuffix: true, locale: es });
 };
 

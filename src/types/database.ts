@@ -7,16 +7,31 @@ export type LeadStage =
   | 'CERRADO_GANADO'
   | 'CERRADO_PERDIDO';
 
-export type LeadChannel = 
+export type LeadChannel =
   | 'OUTBOUND_APOLLO'
+  | 'OUTBOUND_LINKEDIN'
+  | 'OUTBOUND_EMAIL'
   | 'WARM_INTRO'
-  | 'INBOUND_REDES';
+  | 'INBOUND_REDES'
+  | 'INBOUND_WEB'
+  | 'WEBINAR'
+  | 'PARTNER'
+  | 'OTRO';
 
-export type LeadSubchannel = 
+export type LeadSubchannel =
   | 'NINGUNO'
   | 'INSTAGRAM'
   | 'TIKTOK'
   | 'LINKEDIN'
+  | 'YOUTUBE'
+  | 'TWITTER'
+  | 'FACEBOOK'
+  | 'AI_ACADEMY'
+  | 'WORKSHOP'
+  | 'CONFERENCIA'
+  | 'SEO'
+  | 'BLOG'
+  | 'LANDING_PAGE'
   | 'OTRO';
 
 export interface Lead {
@@ -77,8 +92,14 @@ export const STAGE_LABELS: Record<LeadStage, string> = {
 
 export const CHANNEL_LABELS: Record<LeadChannel, string> = {
   'OUTBOUND_APOLLO': 'Outbound Apollo',
-  'WARM_INTRO': 'Warm Intro',
-  'INBOUND_REDES': 'Inbound Redes'
+  'OUTBOUND_LINKEDIN': 'Outbound LinkedIn',
+  'OUTBOUND_EMAIL': 'Outbound Email',
+  'WARM_INTRO': 'Referido / Warm Intro',
+  'INBOUND_REDES': 'Inbound Redes Sociales',
+  'INBOUND_WEB': 'Inbound Web',
+  'WEBINAR': 'Webinar / Evento',
+  'PARTNER': 'Partner / Alianza',
+  'OTRO': 'Otro'
 };
 
 export const SUBCHANNEL_LABELS: Record<LeadSubchannel, string> = {
@@ -86,7 +107,29 @@ export const SUBCHANNEL_LABELS: Record<LeadSubchannel, string> = {
   'INSTAGRAM': 'Instagram',
   'TIKTOK': 'TikTok',
   'LINKEDIN': 'LinkedIn',
+  'YOUTUBE': 'YouTube',
+  'TWITTER': 'Twitter / X',
+  'FACEBOOK': 'Facebook',
+  'AI_ACADEMY': 'AI Academy',
+  'WORKSHOP': 'Workshop',
+  'CONFERENCIA': 'Conferencia',
+  'SEO': 'SEO / Orgánico',
+  'BLOG': 'Blog',
+  'LANDING_PAGE': 'Landing Page',
   'OTRO': 'Otro'
+};
+
+// Mapeo de subcanales válidos por cada canal
+export const CHANNEL_SUBCHANNELS: Record<LeadChannel, LeadSubchannel[]> = {
+  'OUTBOUND_APOLLO': [], // No necesita subcanal
+  'OUTBOUND_LINKEDIN': [], // No necesita subcanal
+  'OUTBOUND_EMAIL': [], // No necesita subcanal
+  'WARM_INTRO': [], // No necesita subcanal
+  'INBOUND_REDES': ['INSTAGRAM', 'TIKTOK', 'LINKEDIN', 'YOUTUBE', 'TWITTER', 'FACEBOOK', 'OTRO'],
+  'INBOUND_WEB': ['SEO', 'BLOG', 'LANDING_PAGE', 'OTRO'],
+  'WEBINAR': ['AI_ACADEMY', 'WORKSHOP', 'CONFERENCIA', 'OTRO'],
+  'PARTNER': ['OTRO'], // Puede especificar cuál partner
+  'OTRO': ['OTRO'],
 };
 
 export type DealStatus =
@@ -227,6 +270,9 @@ export interface Project {
   updated_at: string;
 }
 
+// Proposal status type
+export type ProposalStatus = 'DRAFT' | 'SENT' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED';
+
 // Proposal type
 export interface Proposal {
   id: string;
@@ -240,10 +286,29 @@ export interface Proposal {
   mrr_usd: number;
   fee_usd: number;
   is_final: boolean;
+  status: ProposalStatus;
+  sent_at?: string;
+  version: number;
   notes?: string;
   created_at: string;
   updated_at: string;
 }
+
+export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  'DRAFT': 'Borrador',
+  'SENT': 'Enviada',
+  'REVIEWING': 'En Revisión',
+  'ACCEPTED': 'Aceptada',
+  'REJECTED': 'Rechazada'
+};
+
+export const PROPOSAL_STATUS_COLORS: Record<ProposalStatus, string> = {
+  'DRAFT': 'bg-slate-100 text-slate-700',
+  'SENT': 'bg-blue-100 text-blue-700',
+  'REVIEWING': 'bg-amber-100 text-amber-700',
+  'ACCEPTED': 'bg-emerald-100 text-emerald-700',
+  'REJECTED': 'bg-red-100 text-red-700'
+};
 
 export const PROJECT_STAGE_LABELS: Record<ProjectStage, string> = {
   'DEMOSTRACION': 'Demostración',
@@ -344,7 +409,7 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
 // Project Management Types
 
 // Checklist Items
-export type ChecklistCategory = 'kickoff' | 'development' | 'testing' | 'delivery' | 'general';
+export type ChecklistCategory = 'negotiation' | 'kickoff' | 'development' | 'testing' | 'delivery' | 'general';
 
 export interface ProjectChecklistItem {
   id: string;
@@ -364,6 +429,7 @@ export interface ProjectChecklistItem {
 }
 
 export const CHECKLIST_CATEGORY_LABELS: Record<ChecklistCategory, string> = {
+  'negotiation': 'Negociación',
   'kickoff': 'Kickoff',
   'development': 'Desarrollo',
   'testing': 'Pruebas',
@@ -372,6 +438,7 @@ export const CHECKLIST_CATEGORY_LABELS: Record<ChecklistCategory, string> = {
 };
 
 export const CHECKLIST_CATEGORY_COLORS: Record<ChecklistCategory, string> = {
+  'negotiation': 'bg-orange-100 text-orange-700',
   'kickoff': 'bg-blue-100 text-blue-700',
   'development': 'bg-purple-100 text-purple-700',
   'testing': 'bg-amber-100 text-amber-700',
@@ -379,7 +446,7 @@ export const CHECKLIST_CATEGORY_COLORS: Record<ChecklistCategory, string> = {
   'general': 'bg-slate-100 text-slate-700'
 };
 
-export const CHECKLIST_CATEGORY_ORDER: ChecklistCategory[] = ['kickoff', 'development', 'testing', 'delivery', 'general'];
+export const CHECKLIST_CATEGORY_ORDER: ChecklistCategory[] = ['negotiation', 'kickoff', 'development', 'testing', 'delivery', 'general'];
 
 // Project Updates
 export type ProjectUpdateType = 'progress' | 'blocker' | 'decision' | 'note';
@@ -548,10 +615,10 @@ export const FEEDBACK_SENTIMENT_COLORS: Record<FeedbackSentiment, string> = {
 // TECH MODULE TYPES
 // ==========================================
 
-// Task status and priority enums
-export type TaskStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'BLOCKED';
-export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type EnvironmentType = 'DEVELOPMENT' | 'STAGING' | 'PRODUCTION';
+// Task status and priority enums (lowercase to match DB enum)
+export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'blocked';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type EnvironmentType = 'development' | 'staging' | 'production';
 
 // Team members (hardcoded for now)
 export const TECH_TEAM_MEMBERS = [
@@ -606,15 +673,15 @@ export interface ProjectEnvVariable {
 }
 
 export const ENVIRONMENT_LABELS: Record<EnvironmentType, string> = {
-  'DEVELOPMENT': 'Desarrollo',
-  'STAGING': 'Staging',
-  'PRODUCTION': 'Producción'
+  'development': 'Desarrollo',
+  'staging': 'Staging',
+  'production': 'Producción'
 };
 
 export const ENVIRONMENT_COLORS: Record<EnvironmentType, string> = {
-  'DEVELOPMENT': 'bg-slate-100 text-slate-700',
-  'STAGING': 'bg-amber-100 text-amber-700',
-  'PRODUCTION': 'bg-red-100 text-red-700'
+  'development': 'bg-slate-100 text-slate-700',
+  'staging': 'bg-amber-100 text-amber-700',
+  'production': 'bg-red-100 text-red-700'
 };
 
 // Project Dependencies
@@ -659,44 +726,44 @@ export interface ProjectTask {
 }
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  'BACKLOG': 'Backlog',
-  'TODO': 'Por Hacer',
-  'IN_PROGRESS': 'En Progreso',
-  'IN_REVIEW': 'En Revisión',
-  'DONE': 'Completado',
-  'BLOCKED': 'Bloqueado'
+  'backlog': 'Backlog',
+  'todo': 'Por Hacer',
+  'in_progress': 'En Progreso',
+  'in_review': 'En Revisión',
+  'done': 'Completado',
+  'blocked': 'Bloqueado'
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  'BACKLOG': 'bg-slate-100 text-slate-700',
-  'TODO': 'bg-blue-100 text-blue-700',
-  'IN_PROGRESS': 'bg-amber-100 text-amber-700',
-  'IN_REVIEW': 'bg-purple-100 text-purple-700',
-  'DONE': 'bg-emerald-100 text-emerald-700',
-  'BLOCKED': 'bg-red-100 text-red-700'
+  'backlog': 'bg-slate-100 text-slate-700',
+  'todo': 'bg-blue-100 text-blue-700',
+  'in_progress': 'bg-amber-100 text-amber-700',
+  'in_review': 'bg-purple-100 text-purple-700',
+  'done': 'bg-emerald-100 text-emerald-700',
+  'blocked': 'bg-red-100 text-red-700'
 };
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
-  'LOW': 'Baja',
-  'MEDIUM': 'Media',
-  'HIGH': 'Alta',
-  'URGENT': 'Urgente'
+  'low': 'Baja',
+  'medium': 'Media',
+  'high': 'Alta',
+  'urgent': 'Urgente'
 };
 
 export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
-  'LOW': 'bg-slate-100 text-slate-600',
-  'MEDIUM': 'bg-blue-100 text-blue-600',
-  'HIGH': 'bg-amber-100 text-amber-600',
-  'URGENT': 'bg-red-100 text-red-600'
+  'low': 'bg-slate-100 text-slate-600',
+  'medium': 'bg-blue-100 text-blue-600',
+  'high': 'bg-amber-100 text-amber-600',
+  'urgent': 'bg-red-100 text-red-600'
 };
 
 export const TASK_STATUS_ORDER: TaskStatus[] = [
-  'BACKLOG',
-  'TODO',
-  'IN_PROGRESS',
-  'IN_REVIEW',
-  'DONE',
-  'BLOCKED'
+  'backlog',
+  'todo',
+  'in_progress',
+  'in_review',
+  'done',
+  'blocked'
 ];
 
 // Project Time Log
@@ -740,6 +807,7 @@ export type IncomeCategory =
   | 'MRR'
   | 'IMPLEMENTATION_FEE'
   | 'CONSULTING'
+  | 'PARTNER_CONTRIBUTION'
   | 'OTHER_INCOME';
 
 // Expense categories
@@ -751,12 +819,19 @@ export type ExpenseCategory =
   | 'INFRASTRUCTURE'
   | 'INSURANCE'
   | 'ACCOUNTING'
+  | 'BANKING'
   // Variable expenses
   | 'MARKETING'
   | 'SALES_COMMISSION'
   | 'FREELANCERS'
   | 'TRAVEL'
   | 'EQUIPMENT'
+  | 'BRAND'
+  | 'TRAINING'
+  | 'EVENTS'
+  | 'LEGAL'
+  | 'CONSTITUTION'
+  | 'TAXES'
   | 'OTHER_EXPENSE';
 
 // Payment methods
@@ -768,6 +843,14 @@ export type PaymentMethod =
   | 'PAYPAL'
   | 'CRYPTO'
   | 'OTHER';
+
+// Recurring frequency
+export type RecurringFrequency = 'MONTHLY' | 'BIWEEKLY';
+
+export const RECURRING_FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
+  MONTHLY: 'Mensual',
+  BIWEEKLY: 'Quincenal',
+};
 
 // Finance Transaction interface
 export interface FinanceTransaction {
@@ -785,6 +868,7 @@ export interface FinanceTransaction {
   reference_number?: string;
   transaction_date: string;
   is_recurring: boolean;
+  recurring_frequency?: RecurringFrequency;
   recurring_day?: number;
   recurring_end_date?: string;
   parent_transaction_id?: string;
@@ -839,6 +923,7 @@ export const INCOME_CATEGORY_LABELS: Record<IncomeCategory, string> = {
   'MRR': 'MRR',
   'IMPLEMENTATION_FEE': 'Fee de Implementación',
   'CONSULTING': 'Consultoría',
+  'PARTNER_CONTRIBUTION': 'Aporte Socios',
   'OTHER_INCOME': 'Otros Ingresos'
 };
 
@@ -846,6 +931,7 @@ export const INCOME_CATEGORY_COLORS: Record<IncomeCategory, string> = {
   'MRR': 'bg-emerald-100 text-emerald-700',
   'IMPLEMENTATION_FEE': 'bg-blue-100 text-blue-700',
   'CONSULTING': 'bg-purple-100 text-purple-700',
+  'PARTNER_CONTRIBUTION': 'bg-amber-100 text-amber-700',
   'OTHER_INCOME': 'bg-slate-100 text-slate-700'
 };
 
@@ -856,13 +942,20 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   'SUBSCRIPTIONS': 'Suscripciones',
   'INFRASTRUCTURE': 'Infraestructura',
   'INSURANCE': 'Seguros',
-  'ACCOUNTING': 'Contabilidad/Legal',
+  'ACCOUNTING': 'Contabilidad',
+  'BANKING': 'Gastos Bancarios',
   // Variable
   'MARKETING': 'Marketing',
   'SALES_COMMISSION': 'Comisiones',
   'FREELANCERS': 'Freelancers',
   'TRAVEL': 'Viáticos',
   'EQUIPMENT': 'Equipos',
+  'BRAND': 'Marca/Branding',
+  'TRAINING': 'Capacitación',
+  'EVENTS': 'Eventos',
+  'LEGAL': 'Legal/Jurídico',
+  'CONSTITUTION': 'Constitución',
+  'TAXES': 'Impuestos',
   'OTHER_EXPENSE': 'Otros Gastos'
 };
 
@@ -874,13 +967,20 @@ export const EXPENSE_CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   'INFRASTRUCTURE': 'bg-sky-100 text-sky-700',
   'INSURANCE': 'bg-violet-100 text-violet-700',
   'ACCOUNTING': 'bg-purple-100 text-purple-700',
+  'BANKING': 'bg-slate-100 text-slate-700',
   // Variable - warm tones
   'MARKETING': 'bg-amber-100 text-amber-700',
   'SALES_COMMISSION': 'bg-orange-100 text-orange-700',
   'FREELANCERS': 'bg-rose-100 text-rose-700',
   'TRAVEL': 'bg-pink-100 text-pink-700',
   'EQUIPMENT': 'bg-red-100 text-red-700',
-  'OTHER_EXPENSE': 'bg-slate-100 text-slate-700'
+  'BRAND': 'bg-lime-100 text-lime-700',
+  'TRAINING': 'bg-emerald-100 text-emerald-700',
+  'EVENTS': 'bg-yellow-100 text-yellow-700',
+  'LEGAL': 'bg-fuchsia-100 text-fuchsia-700',
+  'CONSTITUTION': 'bg-violet-100 text-violet-700',
+  'TAXES': 'bg-teal-100 text-teal-700',
+  'OTHER_EXPENSE': 'bg-gray-100 text-gray-700'
 };
 
 // Which categories are fixed vs variable
@@ -890,7 +990,8 @@ export const FIXED_EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'SUBSCRIPTIONS',
   'INFRASTRUCTURE',
   'INSURANCE',
-  'ACCOUNTING'
+  'ACCOUNTING',
+  'BANKING'
 ];
 
 export const VARIABLE_EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -899,6 +1000,12 @@ export const VARIABLE_EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'FREELANCERS',
   'TRAVEL',
   'EQUIPMENT',
+  'BRAND',
+  'TRAINING',
+  'EVENTS',
+  'LEGAL',
+  'CONSTITUTION',
+  'TAXES',
   'OTHER_EXPENSE'
 ];
 

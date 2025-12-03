@@ -21,10 +21,7 @@ import {
   Plus,
   Clock,
   RefreshCw,
-  ExternalLink,
   TrendingUp,
-  Trash2,
-  CheckCircle,
   Edit,
   FolderOpen,
   ListChecks,
@@ -42,7 +39,6 @@ import {
 } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
 import { CreateDealModal } from '@/components/projects/CreateDealModal';
-import { AddProposalModal } from '@/components/projects/AddProposalModal';
 import { SetBookedValuesModal } from '@/components/projects/SetBookedValuesModal';
 import { EditDealModal } from '@/components/projects/EditDealModal';
 import { useProposals } from '@/hooks/useProposals';
@@ -52,6 +48,8 @@ import { ProjectTabExecution } from '@/components/projects/tabs/ProjectTabExecut
 import { ProjectTabFinancial } from '@/components/projects/tabs/ProjectTabFinancial';
 import { ProjectTabDocuments } from '@/components/projects/tabs/ProjectTabDocuments';
 import { ProjectTabEvents } from '@/components/projects/tabs/ProjectTabEvents';
+import { NegotiationChecklistCard } from '@/components/projects/NegotiationChecklistCard';
+import { ProposalManagementCard } from '@/components/projects/ProposalManagementCard';
 
 const getProjectStageColor = (stage: ProjectStage) => {
   const colors: Record<ProjectStage, string> = {
@@ -165,13 +163,12 @@ export default function ProjectDetail() {
   const backUrl = clientId ? `/clients/${clientId}` : `/empresas/${empresaId}`;
 
   const { data: project, isLoading, refetch } = useProjectDetail(projectId);
-  const { proposals, deleteProposal } = useProposals(projectId);
+  const { proposals } = useProposals(projectId);
 
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [savingActivity, setSavingActivity] = useState(false);
   const [createDealModalOpen, setCreateDealModalOpen] = useState(false);
   const [editDealModalOpen, setEditDealModalOpen] = useState(false);
-  const [addProposalModalOpen, setAddProposalModalOpen] = useState(false);
   const [setBookedValuesModalOpen, setSetBookedValuesModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('execution');
   const [newActivity, setNewActivity] = useState({
@@ -264,19 +261,6 @@ export default function ProjectDetail() {
     });
   };
 
-  const handleDeleteProposal = async (proposalId: string) => {
-    try {
-      await deleteProposal(proposalId);
-      toast({ title: 'Propuesta eliminada' });
-    } catch (error) {
-      console.error('Error deleting proposal:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo eliminar la propuesta',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleSaveActivity = async () => {
     if (!newActivity.description.trim() || !projectId || !project?.lead?.id) {
@@ -607,80 +591,18 @@ export default function ProjectDetail() {
             </Card>
           )}
 
+          {/* Negotiation Checklist */}
+          {(project.stage === 'PROPUESTA' || project.stage === 'DEMOSTRACION') && !project.deal && (
+            <NegotiationChecklistCard projectId={projectId!} />
+          )}
+
           {/* Proposals */}
           {(project.stage === 'PROPUESTA' || project.stage === 'DEMOSTRACION') && !project.deal && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Propuestas
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setAddProposalModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Agregar
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {project.proposals && project.proposals.length > 0 ? (
-                  <div className="space-y-2">
-                    {project.proposals.map((proposal: Proposal) => (
-                      <div
-                        key={proposal.id}
-                        className={cn(
-                          'p-3 border rounded-lg',
-                          proposal.is_final && 'border-emerald-500 bg-emerald-50/50'
-                        )}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-sm">{proposal.name}</p>
-                              {proposal.is_final && (
-                                <Badge variant="default" className="text-[10px] h-4 bg-emerald-500">
-                                  <CheckCircle className="h-3 w-3 mr-0.5" />
-                                  Final
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                              <span>MRR: ${proposal.mrr_usd.toLocaleString('en-US')}</span>
-                              <span>Fee: ${proposal.fee_usd.toLocaleString('en-US')}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {proposal.url && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7"
-                                onClick={() => window.open(proposal.url, '_blank')}
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-red-500 hover:text-red-700"
-                              onClick={() => handleDeleteProposal(proposal.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <FileText className="h-6 w-6 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Sin propuestas</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ProposalManagementCard
+              projectId={projectId!}
+              proposals={project.proposals || []}
+              onRefetch={refetch}
+            />
           )}
 
           {/* Deal CTA */}
@@ -893,18 +815,6 @@ export default function ProjectDetail() {
           }}
           proposals={project.proposals || []}
           onSuccess={handleDealCreated}
-        />
-      )}
-
-      {projectId && (
-        <AddProposalModal
-          open={addProposalModalOpen}
-          onClose={() => setAddProposalModalOpen(false)}
-          projectId={projectId}
-          onSuccess={() => {
-            setAddProposalModalOpen(false);
-            refetch();
-          }}
         />
       )}
 

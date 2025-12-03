@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Phone, Calendar, Mail, FileText, MessageSquare, Clock } from 'lucide-react';
+import { Plus, Phone, Calendar, Mail, FileText, MessageSquare, Clock, Upload, X, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,9 +16,20 @@ interface ActivityLog {
   type: 'call' | 'email' | 'meeting' | 'note' | 'quote' | 'follow_up';
   description: string;
   details?: string;
+  transcript_file_path?: string;
   created_at: string;
   created_by?: string;
 }
+
+const ALLOWED_TRANSCRIPT_TYPES = [
+  'text/plain',
+  'text/csv',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword'
+];
+
+const TRANSCRIPT_EXTENSIONS = '.txt,.csv,.pdf,.docx,.doc';
 
 interface LeadActivityLogProps {
   leadId: string;
@@ -67,6 +79,10 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
     description: '',
     details: ''
   });
+  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showTranscriptUpload = newActivity.type === 'call' || newActivity.type === 'meeting';
 
   // Fetch activities for this lead (only those without project_id - lead-level activities)
   useEffect(() => {
@@ -107,6 +123,31 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
 
     setSaving(true);
     try {
+      let transcriptPath: string | null = null;
+
+      // Upload transcript file if exists
+      if (transcriptFile && showTranscriptUpload) {
+        const fileExt = transcriptFile.name.split('.').pop();
+        const fileName = `${leadId}/${Date.now()}_${transcriptFile.name}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('activity-transcripts')
+          .upload(fileName, transcriptFile);
+
+        if (uploadError) {
+          console.error('Error uploading transcript:', uploadError);
+          toast({
+            title: 'Error',
+            description: 'Error al subir el transcript',
+            variant: 'destructive',
+          });
+          setSaving(false);
+          return;
+        }
+
+        transcriptPath = fileName;
+      }
+
       const { data, error } = await supabase
         .from('lead_activities')
         .insert({
@@ -115,6 +156,7 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
           type: newActivity.type,
           description: newActivity.description,
           details: newActivity.details || null,
+          transcript_file_path: transcriptPath,
         })
         .select()
         .single();
@@ -133,6 +175,7 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
       }
 
       setNewActivity({ type: 'call', description: '', details: '' });
+      setTranscriptFile(null);
       setShowForm(false);
 
       toast({
@@ -150,6 +193,55 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!ALLOWED_TRANSCRIPT_TYPES.includes(file.type)) {
+        toast({
+          title: 'Archivo no permitido',
+          description: 'Solo se permiten archivos .txt, .csv, .pdf, .doc y .docx',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        toast({
+          title: 'Archivo muy grande',
+          description: 'El archivo no puede superar los 10MB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setTranscriptFile(file);
+    }
+  };
+
+  const handleDownloadTranscript = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('activity-transcripts')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filePath.split('/').pop() || 'transcript';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading transcript:', error);
+      toast({
+        title: 'Error',
+        description: 'Error al descargar el transcript',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -254,6 +346,51 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
               />
             </div>
 
+            {/* Transcript upload - only for calls and meetings */}
+            {showTranscriptUpload && (
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Transcript (opcional)
+                </Label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept={TRANSCRIPT_EXTENSIONS}
+                  className="hidden"
+                />
+                {transcriptFile ? (
+                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm truncate flex-1">{transcriptFile.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setTranscriptFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-9"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-3 w-3 mr-2" />
+                    Subir transcript (.txt, .csv, .pdf, .docx)
+                  </Button>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowForm(false)} disabled={saving}>
                 Cancelar
@@ -308,6 +445,18 @@ export function LeadActivityLog({ leadId, projectId, onActivityAdded }: LeadActi
                       <p className="text-xs text-muted-foreground mt-1">
                         {activity.details}
                       </p>
+                    )}
+
+                    {activity.transcript_file_path && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs gap-1 mt-1"
+                        onClick={() => handleDownloadTranscript(activity.transcript_file_path!)}
+                      >
+                        <Download className="h-3 w-3" />
+                        Descargar transcript
+                      </Button>
                     )}
                   </div>
                 </div>

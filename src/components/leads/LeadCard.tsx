@@ -16,6 +16,11 @@ import {
   Users,
   Megaphone,
   TrendingUp,
+  Linkedin,
+  MonitorPlay,
+  Handshake,
+  HelpCircle,
+  Search,
 } from 'lucide-react';
 import { useDeals } from '@/hooks/useDeals';
 import { cn } from '@/lib/utils';
@@ -30,15 +35,27 @@ interface LeadCardProps {
 // Channel icons mapping
 const CHANNEL_ICONS: Record<LeadChannel, React.ElementType> = {
   'OUTBOUND_APOLLO': Megaphone,
+  'OUTBOUND_LINKEDIN': Linkedin,
+  'OUTBOUND_EMAIL': Mail,
   'WARM_INTRO': Users,
   'INBOUND_REDES': Globe,
+  'INBOUND_WEB': Search,
+  'WEBINAR': MonitorPlay,
+  'PARTNER': Handshake,
+  'OTRO': HelpCircle,
 };
 
 // Channel colors for badges
 const CHANNEL_COLORS: Record<LeadChannel, string> = {
   'OUTBOUND_APOLLO': 'bg-amber-100 text-amber-700 border-amber-200',
+  'OUTBOUND_LINKEDIN': 'bg-sky-100 text-sky-700 border-sky-200',
+  'OUTBOUND_EMAIL': 'bg-rose-100 text-rose-700 border-rose-200',
   'WARM_INTRO': 'bg-purple-100 text-purple-700 border-purple-200',
   'INBOUND_REDES': 'bg-blue-100 text-blue-700 border-blue-200',
+  'INBOUND_WEB': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'WEBINAR': 'bg-violet-100 text-violet-700 border-violet-200',
+  'PARTNER': 'bg-orange-100 text-orange-700 border-orange-200',
+  'OTRO': 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
 export function LeadCard({ lead, isDragging = false, deals = [] }: LeadCardProps) {

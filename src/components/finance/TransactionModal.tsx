@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -17,20 +18,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, FileText, X, ExternalLink } from 'lucide-react';
 import {
   FinanceTransaction,
   FinanceTransactionType,
   IncomeCategory,
   ExpenseCategory,
   PaymentMethod,
+  RecurringFrequency,
   INCOME_CATEGORY_LABELS,
   EXPENSE_CATEGORY_LABELS,
   PAYMENT_METHOD_LABELS,
+  RECURRING_FREQUENCY_LABELS,
   FIXED_EXPENSE_CATEGORIES,
   VARIABLE_EXPENSE_CATEGORIES,
 } from '@/types/database';
 import { useCurrentExchangeRate } from '@/hooks/useFinanceExchangeRates';
+import { uploadReceiptFile, getReceiptUrl } from '@/hooks/useFinanceTransactions';
 
 interface TransactionModalProps {
   open: boolean;
@@ -52,7 +56,9 @@ interface FormData {
   reference_number: string;
   transaction_date: string;
   is_recurring: boolean;
+  recurring_frequency: RecurringFrequency;
   recurring_day: string;
+  recurring_end_date: string;
   payment_method: string;
   notes: string;
 }
@@ -69,6 +75,11 @@ export function TransactionModal({
   const isIncome = transactionType === 'INCOME';
   const isEditing = !!transaction;
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+
   const [formData, setFormData] = useState<FormData>({
     income_category: '',
     expense_category: '',
@@ -80,7 +91,9 @@ export function TransactionModal({
     reference_number: '',
     transaction_date: new Date().toISOString().split('T')[0],
     is_recurring: false,
+    recurring_frequency: 'MONTHLY',
     recurring_day: '',
+    recurring_end_date: '',
     payment_method: '',
     notes: '',
   });
@@ -88,6 +101,9 @@ export function TransactionModal({
   // Reset form when modal opens/closes or transaction changes
   useEffect(() => {
     if (open) {
+      setSelectedFile(null);
+      setExistingReceiptUrl(null);
+
       if (transaction) {
         setFormData({
           income_category: transaction.income_category || '',
@@ -100,10 +116,19 @@ export function TransactionModal({
           reference_number: transaction.reference_number || '',
           transaction_date: transaction.transaction_date,
           is_recurring: transaction.is_recurring,
+          recurring_frequency: transaction.recurring_frequency || 'MONTHLY',
           recurring_day: transaction.recurring_day?.toString() || '',
+          recurring_end_date: transaction.recurring_end_date || '',
           payment_method: transaction.payment_method || '',
           notes: transaction.notes || '',
         });
+
+        // Load existing receipt URL if exists
+        if (transaction.receipt_path) {
+          getReceiptUrl(transaction.receipt_path).then(url => {
+            setExistingReceiptUrl(url);
+          });
+        }
       } else {
         setFormData({
           income_category: '',
@@ -116,7 +141,9 @@ export function TransactionModal({
           reference_number: '',
           transaction_date: new Date().toISOString().split('T')[0],
           is_recurring: false,
+          recurring_frequency: 'MONTHLY',
           recurring_day: '',
+          recurring_end_date: '',
           payment_method: '',
           notes: '',
         });
@@ -129,8 +156,50 @@ export function TransactionModal({
     ? parseFloat(formData.amount_original || '0') / parseFloat(formData.exchange_rate)
     : parseFloat(formData.amount_original || '0');
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Solo se permiten archivos PDF, JPG, PNG o WebP');
+        return;
+      }
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('El archivo no puede superar 10MB');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    let receipt_path: string | undefined = transaction?.receipt_path || undefined;
+
+    // Upload file if selected
+    if (selectedFile) {
+      try {
+        setIsUploadingFile(true);
+        receipt_path = await uploadReceiptFile(selectedFile, transactionType);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert('Error al subir el archivo');
+        setIsUploadingFile(false);
+        return;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    }
 
     const data = {
       transaction_type: transactionType,
@@ -144,8 +213,11 @@ export function TransactionModal({
       reference_number: formData.reference_number || undefined,
       transaction_date: formData.transaction_date,
       is_recurring: formData.is_recurring,
+      recurring_frequency: formData.is_recurring ? formData.recurring_frequency : undefined,
       recurring_day: formData.is_recurring && formData.recurring_day ? parseInt(formData.recurring_day) : undefined,
+      recurring_end_date: formData.is_recurring && formData.recurring_end_date ? formData.recurring_end_date : undefined,
       payment_method: formData.payment_method || undefined,
+      receipt_path,
       notes: formData.notes || undefined,
     };
 
@@ -160,6 +232,9 @@ export function TransactionModal({
           <DialogTitle>
             {isEditing ? 'Editar' : 'Nuevo'} {isIncome ? 'Ingreso' : 'Gasto'}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing ? 'Modifica los datos de la transacción' : `Registra un nuevo ${isIncome ? 'ingreso' : 'gasto'}`}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -331,7 +406,7 @@ export function TransactionModal({
             <div>
               <Label className="cursor-pointer">Es recurrente</Label>
               <p className="text-xs text-muted-foreground">
-                Se repite cada mes
+                Se repite periódicamente
               </p>
             </div>
             <Switch
@@ -341,18 +416,123 @@ export function TransactionModal({
           </div>
 
           {formData.is_recurring && (
-            <div className="space-y-2">
-              <Label>Día del mes</Label>
-              <Input
-                type="number"
-                min="1"
-                max="28"
-                value={formData.recurring_day}
-                onChange={(e) => setFormData({ ...formData, recurring_day: e.target.value })}
-                placeholder="Ej: 15"
-              />
+            <div className="space-y-4">
+              {/* Frequency selector */}
+              <div className="space-y-2">
+                <Label>Periodicidad</Label>
+                <Select
+                  value={formData.recurring_frequency}
+                  onValueChange={(v: RecurringFrequency) => setFormData({ ...formData, recurring_frequency: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(RECURRING_FREQUENCY_LABELS) as RecurringFrequency[]).map((freq) => (
+                      <SelectItem key={freq} value={freq}>
+                        {RECURRING_FREQUENCY_LABELS[freq]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.recurring_frequency === 'MONTHLY'
+                    ? 'Se repite el mismo día cada mes'
+                    : 'Se repite cada 15 días desde la fecha de inicio'}
+                </p>
+              </div>
+
+              {/* Day of month - only for MONTHLY */}
+              {formData.recurring_frequency === 'MONTHLY' && (
+                <div className="space-y-2">
+                  <Label>Día del mes</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="28"
+                    value={formData.recurring_day}
+                    onChange={(e) => setFormData({ ...formData, recurring_day: e.target.value })}
+                    placeholder="Ej: 15"
+                  />
+                </div>
+              )}
+
+              {/* End date */}
+              <div className="space-y-2">
+                <Label>Fecha de fin (opcional)</Label>
+                <Input
+                  type="date"
+                  value={formData.recurring_end_date}
+                  onChange={(e) => setFormData({ ...formData, recurring_end_date: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Si no se especifica, se generarán todas las ocurrencias hasta hoy
+                </p>
+              </div>
             </div>
           )}
+
+          {/* Receipt Upload */}
+          <div className="space-y-2">
+            <Label>Comprobante (Opcional)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            {/* Show existing receipt */}
+            {existingReceiptUrl && !selectedFile && (
+              <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm flex-1 truncate">Comprobante actual</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                >
+                  <a href={existingReceiptUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            )}
+
+            {/* Show selected file */}
+            {selectedFile && (
+              <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 border-green-200">
+                <FileText className="h-5 w-5 text-green-600" />
+                <span className="text-sm flex-1 truncate">{selectedFile.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveFile}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Upload button */}
+            {!selectedFile && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {existingReceiptUrl ? 'Cambiar comprobante' : 'Subir comprobante'}
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              PDF, JPG, PNG o WebP. Máximo 10MB.
+            </p>
+          </div>
 
           {/* Notes */}
           <div className="space-y-2">
@@ -370,11 +550,11 @@ export function TransactionModal({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
+            <Button type="submit" disabled={isSaving || isUploadingFile}>
+              {isSaving || isUploadingFile ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Guardando...
+                  {isUploadingFile ? 'Subiendo archivo...' : 'Guardando...'}
                 </>
               ) : (
                 'Guardar'

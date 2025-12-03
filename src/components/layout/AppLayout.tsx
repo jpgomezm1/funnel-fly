@@ -20,7 +20,9 @@ import {
   DollarSign,
   Receipt,
   PieChart,
+  Users,
   LogOut,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -84,6 +86,8 @@ const modules: NavModule[] = [
       { name: 'Dashboard', href: '/finance', icon: PieChart },
       { name: 'Ingresos', href: '/finance/income', icon: DollarSign },
       { name: 'Gastos', href: '/finance/expenses', icon: Receipt },
+      { name: 'Nómina', href: '/finance/payroll', icon: Users },
+      { name: 'Contabilidad', href: '/finance/accounting', icon: BookOpen },
     ],
   },
 ];

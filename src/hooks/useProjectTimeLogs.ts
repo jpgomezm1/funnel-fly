@@ -154,13 +154,33 @@ export function useAllTimeLogs() {
   const { data: timeLogs = [], isLoading, error } = useQuery({
     queryKey: ['all-time-logs'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch time logs
+      const { data: logsData, error: logsError } = await supabase
         .from('project_time_logs')
-        .select('*, projects(id, name, client_id, clients(company_name))')
+        .select('*')
         .order('logged_date', { ascending: false });
 
-      if (error) throw error;
-      return data as ProjectTimeLogDB[];
+      if (logsError) throw logsError;
+
+      // Fetch projects with clients
+      const projectIds = [...new Set(logsData?.map(l => l.project_id) || [])];
+      const { data: projectsData } = await supabase
+        .from('projects')
+        .select('id, name, client_id, clients(company_name)')
+        .in('id', projectIds);
+
+      // Map projects
+      const projectMap = (projectsData || []).reduce((acc, p) => {
+        acc[p.id] = { name: p.name, clientName: p.clients?.company_name || 'Sin cliente' };
+        return acc;
+      }, {} as Record<string, { name: string; clientName: string }>);
+
+      // Combine
+      return (logsData || []).map(log => ({
+        ...log,
+        projectName: projectMap[log.project_id]?.name || 'Unknown',
+        clientName: projectMap[log.project_id]?.clientName || 'Unknown',
+      }));
     },
   });
 
@@ -176,7 +196,7 @@ export function useAllTimeLogs() {
   // Calculate total hours by project
   const totalHoursByProject = timeLogs.reduce((acc, log) => {
     if (!acc[log.project_id]) {
-      acc[log.project_id] = { hours: 0, name: (log as any).projects?.name || 'Unknown' };
+      acc[log.project_id] = { hours: 0, name: (log as any).projectName || 'Unknown' };
     }
     acc[log.project_id].hours += log.hours;
     return acc;

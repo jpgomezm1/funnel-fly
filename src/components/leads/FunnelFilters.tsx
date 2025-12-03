@@ -24,6 +24,12 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
+  Linkedin,
+  Mail,
+  MonitorPlay,
+  Handshake,
+  HelpCircle,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,8 +44,14 @@ const COMERCIALES: Record<string, string> = {
 // Channel icons mapping
 const CHANNEL_ICONS: Record<LeadChannel, React.ElementType> = {
   'OUTBOUND_APOLLO': Megaphone,
+  'OUTBOUND_LINKEDIN': Linkedin,
+  'OUTBOUND_EMAIL': Mail,
   'WARM_INTRO': Users,
   'INBOUND_REDES': Globe,
+  'INBOUND_WEB': Search,
+  'WEBINAR': MonitorPlay,
+  'PARTNER': Handshake,
+  'OTRO': HelpCircle,
 };
 
 interface FunnelFiltersProps {

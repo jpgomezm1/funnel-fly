@@ -175,7 +175,10 @@ export default function FinanceIncome() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Ingresos</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <TrendingUp className="h-6 w-6 text-primary" />
+            Ingresos
+          </h1>
           <p className="text-muted-foreground">
             Gestiona todos los ingresos de la empresa
           </p>
@@ -187,39 +190,31 @@ export default function FinanceIncome() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total */}
-        <Card className="md:col-span-2 lg:col-span-1">
+        <Card className="bg-emerald-50 border-emerald-200">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-xl font-bold text-emerald-600">
-                  {formatCurrency(totalIncomeUsd)}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-emerald-600 mb-1">
+              <TrendingUp className="h-4 w-4" />
+              <span className="text-xs font-medium">Total Ingresos</span>
             </div>
+            <p className="text-2xl font-bold text-emerald-700">
+              {formatCurrency(totalIncomeUsd)}
+            </p>
           </CardContent>
         </Card>
 
         {/* By Category */}
         {(Object.keys(INCOME_CATEGORY_LABELS) as IncomeCategory[]).map(cat => (
-          <Card key={cat}>
+          <Card key={cat} className="bg-slate-50 border-slate-200">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", INCOME_CATEGORY_COLORS[cat])}>
-                  <DollarSign className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{INCOME_CATEGORY_LABELS[cat]}</p>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(byCategory[cat] || 0)}
-                  </p>
-                </div>
+              <div className="flex items-center gap-2 text-slate-600 mb-1">
+                <DollarSign className="h-4 w-4" />
+                <span className="text-xs font-medium">{INCOME_CATEGORY_LABELS[cat]}</span>
               </div>
+              <p className="text-2xl font-bold text-slate-700">
+                {formatCurrency(byCategory[cat] || 0)}
+              </p>
             </CardContent>
           </Card>
         ))}

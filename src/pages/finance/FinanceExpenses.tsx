@@ -201,7 +201,10 @@ export default function FinanceExpenses() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Gastos</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Receipt className="h-6 w-6 text-primary" />
+            Gastos
+          </h1>
           <p className="text-muted-foreground">
             Control de gastos fijos y variables
           </p>
@@ -214,51 +217,39 @@ export default function FinanceExpenses() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="bg-red-50 border-red-200">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                <Receipt className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Gastos</p>
-                <p className="text-xl font-bold text-red-600">
-                  {formatCurrency(totalExpensesUsd)}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-red-600 mb-1">
+              <Receipt className="h-4 w-4" />
+              <span className="text-xs font-medium">Total Gastos</span>
             </div>
+            <p className="text-2xl font-bold text-red-700">
+              {formatCurrency(totalExpensesUsd)}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200">
+        <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Lock className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Gastos Fijos</p>
-                <p className="text-xl font-bold text-blue-600">
-                  {formatCurrency(totalFixedExpensesUsd)}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-blue-600 mb-1">
+              <Lock className="h-4 w-4" />
+              <span className="text-xs font-medium">Gastos Fijos</span>
             </div>
+            <p className="text-2xl font-bold text-blue-700">
+              {formatCurrency(totalFixedExpensesUsd)}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-amber-200">
+        <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Unlock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Gastos Variables</p>
-                <p className="text-xl font-bold text-amber-600">
-                  {formatCurrency(totalVariableExpensesUsd)}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-amber-600 mb-1">
+              <Unlock className="h-4 w-4" />
+              <span className="text-xs font-medium">Gastos Variables</span>
             </div>
+            <p className="text-2xl font-bold text-amber-700">
+              {formatCurrency(totalVariableExpensesUsd)}
+            </p>
           </CardContent>
         </Card>
       </div>

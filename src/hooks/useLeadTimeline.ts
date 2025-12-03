@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LeadStage } from '@/types/database';
 
+export type ActivityType = 'call' | 'email' | 'meeting' | 'note' | 'quote' | 'follow_up';
+
 export interface TimelineEvent {
   id: string;
-  type: 'stage_change' | 'deal_created' | 'deal_updated' | 'lead_created' | 'note_updated';
+  type: 'stage_change' | 'deal_created' | 'deal_updated' | 'lead_created' | 'note_updated' | 'activity';
   timestamp: string;
   description: string;
   details?: {
@@ -15,6 +17,9 @@ export interface TimelineEvent {
     mrr_usd?: number;
     implementation_fee_usd?: number;
     amount?: number;
+    activity_type?: ActivityType;
+    activity_details?: string;
+    transcript_file_path?: string;
   };
 }
 
@@ -47,6 +52,14 @@ export function useLeadTimeline(leadId?: string) {
         .eq('lead_id', leadId)
         .order('created_at', { ascending: false });
       if (dealsError) throw dealsError;
+
+      // Fetch activities
+      const { data: activities, error: activitiesError } = await supabase
+        .from('lead_activities')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false });
+      if (activitiesError) throw activitiesError;
 
       const events: TimelineEvent[] = [];
 
@@ -102,6 +115,30 @@ export function useLeadTimeline(leadId?: string) {
             },
           });
         }
+      });
+
+      // Add activity events
+      const ACTIVITY_LABELS: Record<string, string> = {
+        call: 'Llamada',
+        email: 'Email',
+        meeting: 'Reunión',
+        note: 'Nota',
+        quote: 'Cotización',
+        follow_up: 'Seguimiento',
+      };
+
+      activities?.forEach((activity) => {
+        events.push({
+          id: `activity-${activity.id}`,
+          type: 'activity',
+          timestamp: activity.created_at,
+          description: `${ACTIVITY_LABELS[activity.type] || activity.type}: ${activity.description}`,
+          details: {
+            activity_type: activity.type as ActivityType,
+            activity_details: activity.details || undefined,
+            transcript_file_path: activity.transcript_file_path || undefined,
+          },
+        });
       });
 
       // Sort all events by timestamp descending

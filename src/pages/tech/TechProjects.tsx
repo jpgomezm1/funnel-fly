@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -224,9 +223,6 @@ export default function TechProjects() {
           {filteredProjects.map((project) => {
             const stage = (project.execution_stage as ProjectExecutionStage) || 'ONBOARDING';
             const StageIcon = EXECUTION_STAGE_ICONS[stage];
-            const progress = project.taskStats.total > 0
-              ? Math.round((project.taskStats.completed / project.taskStats.total) * 100)
-              : 0;
 
             return (
               <Link key={project.id} to={`/tech/projects/${project.id}`}>
@@ -253,20 +249,6 @@ export default function TechProjects() {
                         <StageIcon className="h-3 w-3 mr-1" />
                         {PROJECT_EXECUTION_STAGE_LABELS[stage]}
                       </Badge>
-                    </div>
-
-                    {/* Progress */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Progreso</span>
-                        <span className={cn(
-                          "font-medium",
-                          progress >= 80 ? "text-emerald-600" :
-                          progress >= 50 ? "text-blue-600" :
-                          "text-amber-600"
-                        )}>{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-1.5" />
                     </div>
 
                     {/* Stats */}
@@ -313,9 +295,6 @@ export default function TechProjects() {
             {filteredProjects.map((project) => {
               const stage = (project.execution_stage as ProjectExecutionStage) || 'ONBOARDING';
               const StageIcon = EXECUTION_STAGE_ICONS[stage];
-              const progress = project.taskStats.total > 0
-                ? Math.round((project.taskStats.completed / project.taskStats.total) * 100)
-                : 0;
 
               return (
                 <Link
@@ -342,14 +321,6 @@ export default function TechProjects() {
                   </div>
 
                   <div className="hidden md:flex items-center gap-6">
-                    <div className="w-32">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Progreso</span>
-                        <span className="font-medium">{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-1.5" />
-                    </div>
-
                     <div className="flex items-center gap-4 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <ListTodo className="h-4 w-4" />

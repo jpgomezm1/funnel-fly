@@ -28,6 +28,9 @@ import TechMetrics from "./pages/tech/TechMetrics";
 import FinanceDashboard from "./pages/finance/FinanceDashboard";
 import FinanceIncome from "./pages/finance/FinanceIncome";
 import FinanceExpenses from "./pages/finance/FinanceExpenses";
+import FinancePayroll from "./pages/finance/FinancePayroll";
+import FinanceAccounting from "./pages/finance/FinanceAccounting";
+import { FinanceGuard } from "./components/guards/FinanceGuard";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +60,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route
@@ -84,10 +87,12 @@ const App = () => (
                     <Route path="/marketing/webinars" element={<Webinars />} />
                     <Route path="/marketing/webinars/:id" element={<WebinarDetail />} />
                     <Route path="/marketing/social" element={<SocialMedia />} />
-                    {/* Finance routes */}
-                    <Route path="/finance" element={<FinanceDashboard />} />
-                    <Route path="/finance/income" element={<FinanceIncome />} />
-                    <Route path="/finance/expenses" element={<FinanceExpenses />} />
+                    {/* Finance routes - protected with password */}
+                    <Route path="/finance" element={<FinanceGuard><FinanceDashboard /></FinanceGuard>} />
+                    <Route path="/finance/income" element={<FinanceGuard><FinanceIncome /></FinanceGuard>} />
+                    <Route path="/finance/expenses" element={<FinanceGuard><FinanceExpenses /></FinanceGuard>} />
+                    <Route path="/finance/payroll" element={<FinanceGuard><FinancePayroll /></FinanceGuard>} />
+                    <Route path="/finance/accounting" element={<FinanceGuard><FinanceAccounting /></FinanceGuard>} />
                     {/* Legacy routes - redirect to empresas */}
                     <Route path="/leads" element={<Empresas />} />
                     <Route path="/leads/:id" element={<EmpresaDetail />} />

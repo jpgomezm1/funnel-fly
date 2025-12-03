@@ -36,9 +36,9 @@ export function useProjectEnvVariables(projectId?: string) {
     enabled: !!projectId,
   });
 
-  // Group by environment
+  // Group by environment (environment is already lowercase in DB, matching EnvironmentType)
   const envByEnvironment = envVariables.reduce((acc, env) => {
-    const envKey = env.environment.toUpperCase() as EnvironmentType;
+    const envKey = env.environment as EnvironmentType;
     if (!acc[envKey]) {
       acc[envKey] = [];
     }

@@ -238,6 +238,9 @@ export function useConvertLeadToProject() {
         phone?: string;
         email?: string;
         notes?: string;
+        description?: string;
+        linkedin_url?: string;
+        website_url?: string;
       };
       projectName: string;
       projectDescription?: string;
@@ -250,11 +253,13 @@ export function useConvertLeadToProject() {
         .maybeSingle();
 
       let clientId: string;
+      let isNewClient = false;
 
       if (existingClient) {
         clientId = existingClient.id;
       } else {
-        // 2. Create client
+        isNewClient = true;
+        // 2. Create client with all lead data including description, linkedin, website
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
           .insert({
@@ -264,6 +269,9 @@ export function useConvertLeadToProject() {
             phone: lead.phone,
             email: lead.email,
             notes: lead.notes,
+            description: lead.description,
+            linkedin_url: lead.linkedin_url,
+            website_url: lead.website_url,
             original_lead_id: lead.id,
           })
           .select()
@@ -271,9 +279,35 @@ export function useConvertLeadToProject() {
 
         if (clientError) throw clientError;
         clientId = clientData.id;
+
+        // 3. Migrate contacts from lead_contacts to client_contacts
+        const { data: leadContacts } = await supabase
+          .from('lead_contacts')
+          .select('name, role, email, phone, description, is_primary')
+          .eq('lead_id', lead.id);
+
+        if (leadContacts && leadContacts.length > 0) {
+          const clientContacts = leadContacts.map(contact => ({
+            client_id: clientId,
+            name: contact.name,
+            role: contact.role,
+            email: contact.email,
+            phone: contact.phone,
+            description: contact.description,
+            is_primary: contact.is_primary,
+          }));
+
+          await supabase.from('client_contacts').insert(clientContacts);
+        }
+
+        // 4. Link existing company_documents to the new client
+        await supabase
+          .from('company_documents')
+          .update({ client_id: clientId })
+          .eq('lead_id', lead.id);
       }
 
-      // 3. Create project in DEMOSTRACION stage
+      // 5. Create project in DEMOSTRACION stage
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -288,25 +322,29 @@ export function useConvertLeadToProject() {
 
       if (projectError) throw projectError;
 
-      // 4. Migrate lead activities to project
+      // 6. Migrate lead activities to project
       await supabase
         .from('lead_activities')
         .update({ project_id: projectData.id })
         .eq('lead_id', lead.id);
 
-      // 5. Mark lead as DEMOSTRACION (so it doesn't appear in early stages)
+      // 7. Mark lead as DEMOSTRACION (so it doesn't appear in early stages)
       await supabase
         .from('leads')
         .update({ stage: 'DEMOSTRACION' })
         .eq('id', lead.id);
 
-      return { clientId, project: projectData };
+      return { clientId, project: projectData, isNewClient };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['client'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['pipeline-projects'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['client-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['company-documents'] });
     },
   });
 
