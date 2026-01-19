@@ -148,15 +148,34 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
       const canGenerateRecurring = data.is_recurring && (frequency === 'BIWEEKLY' || data.recurring_day);
 
       if (canGenerateRecurring) {
-        const startDate = new Date(data.transaction_date + 'T12:00:00'); // Noon to avoid timezone issues
+        // Parse dates by extracting components directly from the string to avoid timezone issues
+        const parseLocalDate = (dateStr: string): { year: number; month: number; day: number } => {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return { year, month: month - 1, day }; // month is 0-indexed
+        };
+
+        const startParts = parseLocalDate(data.transaction_date);
+        const startYear = startParts.year;
+        const startMonth = startParts.month;
+        const startDay = startParts.day;
+
+        // Create startDate for comparisons (using local noon to avoid timezone issues)
+        const startDate = new Date(startYear, startMonth, startDay, 12, 0, 0);
+
         const today = new Date();
         today.setHours(23, 59, 59, 999); // End of today
 
         // Use end date if provided, otherwise use today
         let endDate = today;
+        let endYear = today.getFullYear();
+        let endMonth = today.getMonth();
+
         if (data.recurring_end_date) {
           // Trust the user's end date - they may be registering completed recurring expenses
-          endDate = new Date(data.recurring_end_date + 'T23:59:59');
+          const endParts = parseLocalDate(data.recurring_end_date);
+          endYear = endParts.year;
+          endMonth = endParts.month;
+          endDate = new Date(endParts.year, endParts.month, endParts.day, 23, 59, 59);
         }
 
         const occurrences: typeof baseData[] = [];
@@ -166,17 +185,19 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
         const maxIterations = frequency === 'BIWEEKLY' ? 240 : 120; // More iterations for biweekly
         let iterations = 0;
 
-        // Helper function to format date
+        // Helper function to format date from components
+        const formatDateFromParts = (year: number, month: number, day: number): string => {
+          return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        };
+
+        // Helper function to format date from Date object
         const formatDate = (date: Date): string => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
+          return formatDateFromParts(date.getFullYear(), date.getMonth(), date.getDate());
         };
 
         if (frequency === 'BIWEEKLY') {
           // Biweekly: every 15 days from start date
-          let currentDate = new Date(startDate);
+          let currentDate = new Date(startYear, startMonth, startDay, 12, 0, 0);
 
           while (iterations < maxIterations) {
             // Stop if we've passed the end date
@@ -198,17 +219,18 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
           }
         } else {
           // Monthly: same day each month
-          let currentYear = startDate.getFullYear();
-          let currentMonth = startDate.getMonth();
+          // IMPORTANT: Start from the year/month extracted directly from the input string
+          let currentYear = startYear;
+          let currentMonth = startMonth;
 
           while (iterations < maxIterations) {
             // Get the last day of the current month
             const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
             // Use target day or last day of month if target doesn't exist
-            const dayToUse = Math.min(targetDay, lastDayOfMonth);
+            const dayToUse = Math.min(targetDay!, lastDayOfMonth);
 
-            // Set to noon to match startDate time and avoid timezone issues
+            // Create occurrence date using extracted year/month to preserve original year
             const occurrenceDate = new Date(currentYear, currentMonth, dayToUse, 12, 0, 0);
 
             // Stop if we've passed the end date
@@ -220,7 +242,7 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
             if (occurrenceDate >= startDate) {
               occurrences.push({
                 ...baseData,
-                transaction_date: formatDate(occurrenceDate),
+                transaction_date: formatDateFromParts(currentYear, currentMonth, dayToUse),
               });
             }
 
