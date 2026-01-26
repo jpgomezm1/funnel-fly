@@ -3,7 +3,6 @@ import {
   format,
   getDay,
   getHours,
-  parseISO,
   startOfDay,
   startOfWeek,
   startOfMonth,
@@ -14,9 +13,10 @@ import {
   endOfWeek,
   endOfMonth,
   isWithinInterval,
-  subDays,
   subWeeks,
   subMonths,
+  getWeek,
+  isSameWeek,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -31,14 +31,15 @@ import {
   Pie,
   Cell,
   Legend,
-  LineChart,
-  Line,
   Area,
   AreaChart,
+  ReferenceLine,
+  ComposedChart,
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import {
   Call,
   CallTeamMember,
@@ -59,6 +60,10 @@ import {
   XCircle,
   CalendarClock,
   BarChart3,
+  Trophy,
+  Flame,
+  Award,
+  TrendingDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +71,9 @@ interface CallsAnalyticsProps {
   calls: Call[];
   title?: string;
 }
+
+// Weekly goal per person
+const WEEKLY_GOAL = 10;
 
 // Colors for charts
 const COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1'];
@@ -75,6 +83,13 @@ const TEAM_COLORS: Record<CallTeamMember, string> = {
   juan_pablo: '#3B82F6',
   sara: '#8B5CF6',
   agustin: '#10B981',
+};
+
+const TEAM_COLORS_LIGHT: Record<CallTeamMember, string> = {
+  pamela: 'bg-pink-100 text-pink-700 border-pink-200',
+  juan_pablo: 'bg-blue-100 text-blue-700 border-blue-200',
+  sara: 'bg-purple-100 text-purple-700 border-purple-200',
+  agustin: 'bg-emerald-100 text-emerald-700 border-emerald-200',
 };
 
 const RESULT_COLORS: Record<CallResult, string> = {
@@ -92,8 +107,6 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
 
   // Timeline data based on view
   const timelineData = useMemo(() => {
-    if (calls.length === 0) return [];
-
     const now = new Date();
     let intervals: Date[] = [];
     let formatStr: string;
@@ -102,12 +115,14 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
 
     switch (timelineView) {
       case 'day':
-        // Last 30 days
+        // All days of current month
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
         intervals = eachDayOfInterval({
-          start: subDays(now, 29),
-          end: now,
+          start: monthStart,
+          end: monthEnd,
         });
-        formatStr = 'd MMM';
+        formatStr = 'd';
         getIntervalStart = startOfDay;
         getIntervalEnd = endOfDay;
         break;
@@ -130,7 +145,7 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
           start: subMonths(now, 11),
           end: now,
         });
-        formatStr = 'MMM yyyy';
+        formatStr = 'MMM';
         getIntervalStart = startOfMonth;
         getIntervalEnd = endOfMonth;
         break;
@@ -147,16 +162,94 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
 
       const completedCalls = intervalCalls.filter((c) => c.call_result);
       const successfulCalls = intervalCalls.filter((c) => c.call_result === 'lead_pasa_fase_0');
+      const isCurrentPeriod = isWithinInterval(now, { start, end });
 
       return {
         date: format(intervalDate, formatStr, { locale: es }),
-        fullDate: format(intervalDate, 'PPP', { locale: es }),
+        fullDate: format(intervalDate, timelineView === 'day' ? "EEEE d 'de' MMMM" : 'PPP', { locale: es }),
         total: intervalCalls.length,
         completadas: completedCalls.length,
         exitosas: successfulCalls.length,
+        isCurrent: isCurrentPeriod,
       };
     });
   }, [calls, timelineView]);
+
+  // Weekly goals tracking - current week and last 8 weeks
+  const weeklyGoalsData = useMemo(() => {
+    const now = new Date();
+    const weeks = eachWeekOfInterval(
+      {
+        start: subWeeks(now, 7),
+        end: now,
+      },
+      { weekStartsOn: 1 }
+    );
+
+    const teamMembers = Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[];
+
+    return weeks.map((weekStart) => {
+      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+      const isCurrentWeek = isSameWeek(weekStart, now, { weekStartsOn: 1 });
+      const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
+
+      const byMember: Record<string, number> = {};
+      teamMembers.forEach((member) => {
+        const memberCalls = calls.filter((c) => {
+          const callDate = new Date(c.scheduled_at);
+          return (
+            c.team_member === member &&
+            isWithinInterval(callDate, { start: weekStart, end: weekEnd })
+          );
+        });
+        byMember[member] = memberCalls.length;
+      });
+
+      const totalCalls = Object.values(byMember).reduce((sum, count) => sum + count, 0);
+      const teamGoal = teamMembers.length * WEEKLY_GOAL;
+
+      return {
+        weekStart,
+        weekEnd,
+        weekNumber,
+        weekLabel: isCurrentWeek
+          ? 'Esta Semana'
+          : `Sem ${weekNumber}`,
+        fullLabel: `${format(weekStart, "d MMM", { locale: es })} - ${format(weekEnd, "d MMM", { locale: es })}`,
+        isCurrentWeek,
+        byMember,
+        totalCalls,
+        teamGoal,
+        teamProgress: Math.round((totalCalls / teamGoal) * 100),
+      };
+    });
+  }, [calls]);
+
+  // Current week data for individual progress
+  const currentWeekData = useMemo(() => {
+    const currentWeek = weeklyGoalsData.find((w) => w.isCurrentWeek);
+    if (!currentWeek) return [];
+
+    return (Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => {
+      const count = currentWeek.byMember[member] || 0;
+      const progress = Math.round((count / WEEKLY_GOAL) * 100);
+      const isOnTrack = progress >= 50; // At least 50% by mid-week
+      const isComplete = count >= WEEKLY_GOAL;
+
+      return {
+        member,
+        name: TEAM_MEMBER_LABELS[member].split(' ')[0],
+        fullName: TEAM_MEMBER_LABELS[member],
+        count,
+        goal: WEEKLY_GOAL,
+        progress: Math.min(progress, 100),
+        remaining: Math.max(WEEKLY_GOAL - count, 0),
+        isOnTrack,
+        isComplete,
+        color: TEAM_COLORS[member],
+      };
+    });
+  }, [weeklyGoalsData]);
 
   const analytics = useMemo(() => {
     const now = new Date();
@@ -335,14 +428,191 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
         </Card>
       </div>
 
+      {/* Weekly Goals Section */}
+      <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-amber-500" />
+                Metas Semanales por Persona
+              </CardTitle>
+              <CardDescription>
+                Meta: {WEEKLY_GOAL} reuniones por persona / semana
+              </CardDescription>
+            </div>
+            {weeklyGoalsData.find(w => w.isCurrentWeek) && (
+              <Badge variant="outline" className="text-sm">
+                {weeklyGoalsData.find(w => w.isCurrentWeek)?.fullLabel}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Current Week Progress Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {currentWeekData.map((person) => (
+              <Card
+                key={person.member}
+                className={cn(
+                  "relative overflow-hidden",
+                  person.isComplete && "ring-2 ring-green-400"
+                )}
+              >
+                <CardContent className="p-4">
+                  {person.isComplete && (
+                    <div className="absolute top-2 right-2">
+                      <Award className="h-5 w-5 text-amber-500" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                      style={{ backgroundColor: person.color }}
+                    >
+                      {person.name[0]}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{person.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {person.count} / {person.goal}
+                      </p>
+                    </div>
+                  </div>
+                  <Progress
+                    value={person.progress}
+                    className="h-2 mb-2"
+                  />
+                  <div className="flex justify-between items-center">
+                    <span className={cn(
+                      "text-xs font-medium",
+                      person.isComplete ? "text-green-600" :
+                      person.progress >= 70 ? "text-blue-600" :
+                      person.progress >= 40 ? "text-amber-600" : "text-red-600"
+                    )}>
+                      {person.progress}%
+                    </span>
+                    {!person.isComplete && (
+                      <span className="text-xs text-muted-foreground">
+                        Faltan {person.remaining}
+                      </span>
+                    )}
+                    {person.isComplete && (
+                      <Badge className="text-xs bg-green-100 text-green-700">
+                        Meta cumplida
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Historical Weekly Performance Chart */}
+          <div className="mt-6">
+            <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+              <Flame className="h-4 w-4 text-orange-500" />
+              Historial de Semanas (Reuniones por Persona)
+            </h4>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={weeklyGoalsData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="weekLabel" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background border rounded-lg p-3 shadow-lg">
+                            <p className="font-medium text-sm mb-2">{data.fullLabel}</p>
+                            <div className="space-y-1.5">
+                              {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => {
+                                const count = data.byMember[member] || 0;
+                                const achieved = count >= WEEKLY_GOAL;
+                                return (
+                                  <div key={member} className="flex items-center justify-between gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-2.5 h-2.5 rounded-full"
+                                        style={{ backgroundColor: TEAM_COLORS[member] }}
+                                      />
+                                      <span>{TEAM_MEMBER_LABELS[member].split(' ')[0]}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <span className={cn(
+                                        "font-medium",
+                                        achieved ? "text-green-600" : ""
+                                      )}>
+                                        {count}
+                                      </span>
+                                      <span className="text-muted-foreground">/ {WEEKLY_GOAL}</span>
+                                      {achieved && <CheckCircle className="h-3 w-3 text-green-600" />}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div className="pt-2 mt-2 border-t">
+                                <div className="flex justify-between text-sm font-medium">
+                                  <span>Total Equipo</span>
+                                  <span>{data.totalCalls} / {data.teamGoal}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <ReferenceLine y={WEEKLY_GOAL} stroke="#10B981" strokeDasharray="5 5" label={{ value: 'Meta', position: 'right', fontSize: 10 }} />
+                  {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => (
+                    <Bar
+                      key={member}
+                      dataKey={`byMember.${member}`}
+                      name={TEAM_MEMBER_LABELS[member].split(' ')[0]}
+                      fill={TEAM_COLORS[member]}
+                      radius={[2, 2, 0, 0]}
+                      stackId="a"
+                    />
+                  ))}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Team Legend */}
+            <div className="flex items-center justify-center gap-4 mt-3">
+              {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => (
+                <div key={member} className="flex items-center gap-1.5">
+                  <div
+                    className="w-3 h-3 rounded"
+                    style={{ backgroundColor: TEAM_COLORS[member] }}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {TEAM_MEMBER_LABELS[member].split(' ')[0]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Timeline Chart */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Llamadas en el Tiempo
-            </CardTitle>
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Llamadas en el Tiempo
+              </CardTitle>
+              {timelineView === 'day' && (
+                <CardDescription>
+                  {format(new Date(), "MMMM yyyy", { locale: es })}
+                </CardDescription>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <ToggleGroup
                 type="single"
@@ -399,7 +669,7 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
                     tick={{ fontSize: 11 }}
                     tickLine={false}
                     axisLine={false}
-                    interval={timelineView === 'day' ? 4 : timelineView === 'week' ? 1 : 0}
+                    interval={timelineView === 'day' ? 2 : timelineView === 'week' ? 1 : 0}
                   />
                   <YAxis
                     allowDecimals={false}
@@ -409,12 +679,12 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
                     width={30}
                   />
                   <Tooltip
-                    content={({ active, payload, label }) => {
+                    content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
                           <div className="bg-background border rounded-lg p-3 shadow-lg">
-                            <p className="font-medium text-sm mb-2">{data.fullDate}</p>
+                            <p className="font-medium text-sm mb-2 capitalize">{data.fullDate}</p>
                             <div className="space-y-1">
                               <div className="flex items-center gap-2 text-sm">
                                 <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
@@ -427,6 +697,11 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
                                 <span className="font-medium text-green-600">{data.exitosas}</span>
                               </div>
                             </div>
+                            {data.isCurrent && (
+                              <Badge variant="secondary" className="mt-2 text-xs">
+                                Hoy
+                              </Badge>
+                            )}
                           </div>
                         );
                       }
