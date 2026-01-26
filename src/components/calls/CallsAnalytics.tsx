@@ -1,5 +1,23 @@
-import { useMemo } from 'react';
-import { format, getDay, getHours, parseISO } from 'date-fns';
+import { useMemo, useState } from 'react';
+import {
+  format,
+  getDay,
+  getHours,
+  parseISO,
+  startOfDay,
+  startOfWeek,
+  startOfMonth,
+  eachDayOfInterval,
+  eachWeekOfInterval,
+  eachMonthOfInterval,
+  endOfDay,
+  endOfWeek,
+  endOfMonth,
+  isWithinInterval,
+  subDays,
+  subWeeks,
+  subMonths,
+} from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   BarChart,
@@ -13,8 +31,14 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Call,
   CallTeamMember,
@@ -34,7 +58,9 @@ import {
   CheckCircle,
   XCircle,
   CalendarClock,
+  BarChart3,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CallsAnalyticsProps {
   calls: Call[];
@@ -59,7 +85,79 @@ const RESULT_COLORS: Record<CallResult, string> = {
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
 
+type TimelineView = 'day' | 'week' | 'month';
+
 export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: CallsAnalyticsProps) {
+  const [timelineView, setTimelineView] = useState<TimelineView>('day');
+
+  // Timeline data based on view
+  const timelineData = useMemo(() => {
+    if (calls.length === 0) return [];
+
+    const now = new Date();
+    let intervals: Date[] = [];
+    let formatStr: string;
+    let getIntervalStart: (date: Date) => Date;
+    let getIntervalEnd: (date: Date) => Date;
+
+    switch (timelineView) {
+      case 'day':
+        // Last 30 days
+        intervals = eachDayOfInterval({
+          start: subDays(now, 29),
+          end: now,
+        });
+        formatStr = 'd MMM';
+        getIntervalStart = startOfDay;
+        getIntervalEnd = endOfDay;
+        break;
+      case 'week':
+        // Last 12 weeks
+        intervals = eachWeekOfInterval(
+          {
+            start: subWeeks(now, 11),
+            end: now,
+          },
+          { weekStartsOn: 1 }
+        );
+        formatStr = "'Sem' w";
+        getIntervalStart = (d) => startOfWeek(d, { weekStartsOn: 1 });
+        getIntervalEnd = (d) => endOfWeek(d, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        // Last 12 months
+        intervals = eachMonthOfInterval({
+          start: subMonths(now, 11),
+          end: now,
+        });
+        formatStr = 'MMM yyyy';
+        getIntervalStart = startOfMonth;
+        getIntervalEnd = endOfMonth;
+        break;
+    }
+
+    return intervals.map((intervalDate) => {
+      const start = getIntervalStart(intervalDate);
+      const end = getIntervalEnd(intervalDate);
+
+      const intervalCalls = calls.filter((c) => {
+        const callDate = new Date(c.scheduled_at);
+        return isWithinInterval(callDate, { start, end });
+      });
+
+      const completedCalls = intervalCalls.filter((c) => c.call_result);
+      const successfulCalls = intervalCalls.filter((c) => c.call_result === 'lead_pasa_fase_0');
+
+      return {
+        date: format(intervalDate, formatStr, { locale: es }),
+        fullDate: format(intervalDate, 'PPP', { locale: es }),
+        total: intervalCalls.length,
+        completadas: completedCalls.length,
+        exitosas: successfulCalls.length,
+      };
+    });
+  }, [calls, timelineView]);
+
   const analytics = useMemo(() => {
     const now = new Date();
     const pastCalls = calls.filter(c => new Date(c.scheduled_at) < now);
@@ -236,6 +334,142 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
           </CardContent>
         </Card>
       </div>
+
+      {/* Timeline Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Llamadas en el Tiempo
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <ToggleGroup
+                type="single"
+                value={timelineView}
+                onValueChange={(value) => value && setTimelineView(value as TimelineView)}
+                className="bg-muted rounded-lg p-1"
+              >
+                <ToggleGroupItem
+                  value="day"
+                  className={cn(
+                    "px-3 py-1 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm",
+                  )}
+                >
+                  Diario
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="week"
+                  className={cn(
+                    "px-3 py-1 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm",
+                  )}
+                >
+                  Semanal
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="month"
+                  className={cn(
+                    "px-3 py-1 text-xs rounded-md data-[state=on]:bg-background data-[state=on]:shadow-sm",
+                  )}
+                >
+                  Mensual
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {timelineData.length > 0 ? (
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timelineData}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorExitosas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={timelineView === 'day' ? 4 : timelineView === 'week' ? 1 : 0}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background border rounded-lg p-3 shadow-lg">
+                            <p className="font-medium text-sm mb-2">{data.fullDate}</p>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-sm">
+                                <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+                                <span className="text-muted-foreground">Total:</span>
+                                <span className="font-medium">{data.total}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm">
+                                <div className="w-3 h-3 rounded-full bg-[#10B981]" />
+                                <span className="text-muted-foreground">Exitosas:</span>
+                                <span className="font-medium text-green-600">{data.exitosas}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#8B5CF6"
+                    strokeWidth={2}
+                    fill="url(#colorTotal)"
+                    name="Total Llamadas"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="exitosas"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    fill="url(#colorExitosas)"
+                    name="Pasan Fase 0"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              No hay datos para mostrar
+            </div>
+          )}
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+              <span className="text-sm text-muted-foreground">Total Llamadas</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#10B981]" />
+              <span className="text-sm text-muted-foreground">Pasan Fase 0</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
