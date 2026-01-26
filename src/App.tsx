@@ -31,6 +31,8 @@ import FinanceExpenses from "./pages/finance/FinanceExpenses";
 import FinancePayroll from "./pages/finance/FinancePayroll";
 import FinanceAccounting from "./pages/finance/FinanceAccounting";
 import { FinanceGuard } from "./components/guards/FinanceGuard";
+// Sales
+import Calls from "./pages/sales/Calls";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +89,8 @@ const App = () => (
                     <Route path="/marketing/webinars" element={<Webinars />} />
                     <Route path="/marketing/webinars/:id" element={<WebinarDetail />} />
                     <Route path="/marketing/social" element={<SocialMedia />} />
+                    {/* Sales routes */}
+                    <Route path="/sales/calls" element={<Calls />} />
                     {/* Finance routes - protected with password */}
                     <Route path="/finance" element={<FinanceGuard><FinanceDashboard /></FinanceGuard>} />
                     <Route path="/finance/income" element={<FinanceGuard><FinanceIncome /></FinanceGuard>} />

@@ -23,6 +23,7 @@ import {
   Users,
   LogOut,
   BookOpen,
+  Phone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,7 @@ const modules: NavModule[] = [
       { name: 'Funnel', href: '/funnel', icon: KanbanSquare },
       { name: 'Empresas', href: '/empresas', icon: Building2 },
       { name: 'Clientes', href: '/clients', icon: Handshake },
+      { name: 'Calls', href: '/sales/calls', icon: Phone },
       { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     ],
   },
