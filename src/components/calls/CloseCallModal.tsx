@@ -106,6 +106,7 @@ const RISK_SIGNALS_LIST: RiskSignal[] = [
 export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [duration, setDuration] = useState('30');
+  const [skippedDiscovery, setSkippedDiscovery] = useState(false);
 
   // Transcript and Key Notes (optional, at the beginning)
   const [transcript, setTranscript] = useState('');
@@ -127,6 +128,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
       setTranscript(call.transcript || '');
       setKeyNotes(call.key_notes || []);
       setNewNote('');
+      setSkippedDiscovery(false);
 
       if (call.qualification) {
         setQualification(call.qualification);
@@ -146,7 +148,13 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
     setTranscript('');
     setKeyNotes([]);
     setNewNote('');
+    setSkippedDiscovery(false);
     onClose();
+  };
+
+  const handleSkipDiscovery = () => {
+    setSkippedDiscovery(true);
+    setCurrentStep(9); // Jump to Decision step
   };
 
   const handleAddNote = () => {
@@ -199,41 +207,34 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
     qualification.who_pays &&
     qualification.who_suffers_problem;
 
-  // Step validation
+  // Step validation - All steps are optional except Decision (step 9)
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
         return true; // Transcript and key notes are optional
       case 2:
-        return !!qualification.contact_role;
+        return true; // Context is optional
       case 3:
-        return !!qualification.client_problem_description &&
+        // Client problem description max length check only if provided
+        return !qualification.client_problem_description ||
                qualification.client_problem_description.length <= 500;
       case 4:
-        return !!qualification.problem_type &&
-               !!qualification.affected_area &&
-               !!qualification.real_problem_description &&
+        // Real problem description max length check only if provided
+        return !qualification.real_problem_description ||
                qualification.real_problem_description.length <= 400;
       case 5:
-        return !!qualification.impacts_revenue &&
-               !!qualification.impacts_control &&
-               !!qualification.impacts_continuity &&
-               !!qualification.global_impact_level &&
-               !impactValidation.allNo;
+        return true; // Impact is optional
       case 6:
-        return !!qualification.final_decision_maker &&
-               !!qualification.who_pays &&
-               !!qualification.who_suffers_problem;
+        return true; // Decision maker is optional
       case 7:
-        return !!qualification.payment_capacity &&
-               !!qualification.urgency &&
-               !!qualification.tried_before;
+        return true; // Payment capacity is optional
       case 8:
         return true; // Risk signals are optional
       case 9:
-        return !!qualification.qualification_decision;
+        return !!qualification.qualification_decision; // REQUIRED: Decision
       case 10:
-        return !!qualification.decision_justification &&
+        // Justification max length check only if provided
+        return !qualification.decision_justification ||
                qualification.decision_justification.length <= 300;
       default:
         return true;
@@ -296,10 +297,33 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               <h3 className="text-lg font-semibold">Transcript y Notas Clave</h3>
             </div>
 
+            {/* Skip Discovery Form Button */}
+            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <ChevronRight className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-amber-900">¿Quieres ir directo al cierre?</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Si no necesitas llenar el formulario de discovery completo, puedes saltar directamente a la decision final.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-3 border-amber-300 text-amber-700 hover:bg-amber-100"
+                    onClick={handleSkipDiscovery}
+                  >
+                    <ChevronRight className="h-4 w-4 mr-2" />
+                    Skip Discovery Form
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                Estos campos son opcionales pero muy valiosos para el seguimiento.
-                Puedes pegar el transcript de la llamada y agregar los puntos clave.
+                Todos los campos del formulario son opcionales. Solo la decision final es requerida.
               </p>
             </div>
 
@@ -436,14 +460,12 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  Rol de la persona <span className="text-destructive">*</span>
-                </Label>
+                <Label>Rol de la persona</Label>
                 <Select
                   value={qualification.contact_role || ''}
                   onValueChange={(v) => updateQualification('contact_role', v as ContactRole)}
                 >
-                  <SelectTrigger className={!qualification.contact_role ? 'border-destructive' : ''}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Seleccionar rol" />
                   </SelectTrigger>
                   <SelectContent>
@@ -452,12 +474,6 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                {!qualification.contact_role && (
-                  <p className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Campo obligatorio
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -472,9 +488,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Describe el problema tal como lo expresó el cliente <span className="text-destructive">*</span>
-              </Label>
+              <Label>Describe el problema tal como lo expresó el cliente</Label>
               <Textarea
                 value={qualification.client_problem_description || ''}
                 onChange={(e) => updateQualification('client_problem_description', e.target.value)}
@@ -525,14 +539,12 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Es síntoma o causa? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Es síntoma o causa?</Label>
                 <Select
                   value={qualification.problem_type || ''}
                   onValueChange={(v) => updateQualification('problem_type', v as ProblemType)}
                 >
-                  <SelectTrigger className={!qualification.problem_type ? 'border-destructive' : ''}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
@@ -544,14 +556,12 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  Área principal afectada <span className="text-destructive">*</span>
-                </Label>
+                <Label>Área principal afectada</Label>
                 <Select
                   value={qualification.affected_area || ''}
                   onValueChange={(v) => updateQualification('affected_area', v as AffectedArea)}
                 >
-                  <SelectTrigger className={!qualification.affected_area ? 'border-destructive' : ''}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Seleccionar área" />
                   </SelectTrigger>
                   <SelectContent>
@@ -564,9 +574,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Descripción del problema real <span className="text-destructive">*</span>
-              </Label>
+              <Label>Descripción del problema real</Label>
               <Textarea
                 value={qualification.real_problem_description || ''}
                 onChange={(e) => updateQualification('real_problem_description', e.target.value)}
@@ -591,9 +599,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Impacta revenue? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Impacta revenue?</Label>
                 <Select
                   value={qualification.impacts_revenue || ''}
                   onValueChange={(v) => updateQualification('impacts_revenue', v as YesNo)}
@@ -610,9 +616,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Impacta control? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Impacta control?</Label>
                 <Select
                   value={qualification.impacts_control || ''}
                   onValueChange={(v) => updateQualification('impacts_control', v as YesNo)}
@@ -629,9 +633,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Impacta continuidad? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Impacta continuidad?</Label>
                 <Select
                   value={qualification.impacts_continuity || ''}
                   onValueChange={(v) => updateQualification('impacts_continuity', v as YesNo)}
@@ -649,9 +651,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Nivel de impacto global <span className="text-destructive">*</span>
-              </Label>
+              <Label>Nivel de impacto global</Label>
               <Select
                 value={qualification.global_impact_level || ''}
                 onValueChange={(v) => updateQualification('global_impact_level', v as ImpactLevel)}
@@ -668,10 +668,10 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
             </div>
 
             {impactValidation.allNo && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800 flex items-center gap-2">
-                  <XCircle className="h-4 w-4" />
-                  <strong>Bloqueado:</strong> Si no impacta revenue, control ni continuidad, no puede avanzar.
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <strong>Nota:</strong> Si no impacta revenue, control ni continuidad, considera "No Aplica"
                 </p>
               </div>
             )}
@@ -680,7 +680,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  <strong>Recomendación:</strong> Impacto bajo sugiere "No Aplica"
+                  <strong>Nota:</strong> Impacto bajo sugiere "No Aplica"
                 </p>
               </div>
             )}
@@ -697,9 +697,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Quién toma la decisión final? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Quién toma la decisión final?</Label>
                 <Input
                   value={qualification.final_decision_maker || ''}
                   onChange={(e) => updateQualification('final_decision_maker', e.target.value)}
@@ -708,9 +706,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Quién paga? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Quién paga?</Label>
                 <Input
                   value={qualification.who_pays || ''}
                   onChange={(e) => updateQualification('who_pays', e.target.value)}
@@ -719,9 +715,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Quién sufre el problema si no se resuelve? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Quién sufre el problema si no se resuelve?</Label>
                 <Input
                   value={qualification.who_suffers_problem || ''}
                   onChange={(e) => updateQualification('who_suffers_problem', e.target.value)}
@@ -764,9 +758,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  Capacidad de pagar tickets altos <span className="text-destructive">*</span>
-                </Label>
+                <Label>Capacidad de pagar tickets altos</Label>
                 <Select
                   value={qualification.payment_capacity || ''}
                   onValueChange={(v) => updateQualification('payment_capacity', v as PaymentCapacity)}
@@ -783,9 +775,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  Urgencia del problema <span className="text-destructive">*</span>
-                </Label>
+                <Label>Urgencia del problema</Label>
                 <Select
                   value={qualification.urgency || ''}
                   onValueChange={(v) => updateQualification('urgency', v as Urgency)}
@@ -802,9 +792,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  ¿Ya intentaron resolverlo antes? <span className="text-destructive">*</span>
-                </Label>
+                <Label>¿Ya intentaron resolverlo antes?</Label>
                 <Select
                   value={qualification.tried_before || ''}
                   onValueChange={(v) => updateQualification('tried_before', v as YesNo)}
@@ -891,7 +879,16 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               <h3 className="text-lg font-semibold">Decisión Final</h3>
             </div>
 
-            {impactValidation.suggestNoAplica && (
+            {skippedDiscovery && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+                <p className="text-sm text-amber-800 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Formulario de discovery omitido. Puedes volver atrás para completarlo si lo deseas.
+                </p>
+              </div>
+            )}
+
+            {impactValidation.suggestNoAplica && !skippedDiscovery && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
                 <p className="text-sm text-amber-800 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
@@ -1014,9 +1011,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Justificación breve de la decisión tomada <span className="text-destructive">*</span>
-              </Label>
+              <Label>Justificación breve de la decisión tomada (opcional)</Label>
               <Textarea
                 value={qualification.decision_justification || ''}
                 onChange={(e) => updateQualification('decision_justification', e.target.value)}
@@ -1031,7 +1026,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                Este campo existe para auditoría futura, no para storytelling.
+                Este campo es opcional pero útil para auditoría futura.
                 Sé conciso y objetivo.
               </p>
             </div>
@@ -1090,26 +1085,24 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               const StepIcon = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
-              const isValid = isStepValid(step.id);
+              const isSkipped = skippedDiscovery && step.id >= 2 && step.id <= 8;
 
               return (
                 <button
                   key={step.id}
                   onClick={() => {
-                    // Can only go back or to completed steps
-                    if (step.id < currentStep || (step.id === currentStep)) {
-                      setCurrentStep(step.id);
-                    }
+                    // Can go to any step (they're all optional now)
+                    setCurrentStep(step.id);
                   }}
                   className={cn(
                     "flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : isCompleted
-                        ? isValid
+                      : isSkipped
+                        ? "bg-gray-100 text-gray-400 line-through"
+                        : isCompleted
                           ? "bg-green-100 text-green-700"
-                          : "bg-amber-100 text-amber-700"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
                   )}
                 >
                   <StepIcon className="h-3.5 w-3.5" />
