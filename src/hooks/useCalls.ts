@@ -33,6 +33,39 @@ async function sendCallNotification(callData: Call) {
   }
 }
 
+// Function to send email notification when a call is completed
+async function sendCallCompletedNotification(callData: Call) {
+  try {
+    const { error } = await supabase.functions.invoke('send-call-completed-notification', {
+      body: {
+        callData: {
+          id: callData.id,
+          scheduled_at: callData.scheduled_at,
+          company_name: callData.company_name,
+          contact_name: callData.contact_name,
+          contact_phone: callData.contact_phone,
+          contact_email: callData.contact_email,
+          team_member: callData.team_member,
+          source: callData.source,
+          call_result: callData.call_result,
+          key_notes: callData.key_notes,
+          notes: callData.notes,
+          duration_minutes: callData.duration_minutes,
+          qualification: callData.qualification,
+        },
+      },
+    });
+
+    if (error) {
+      console.error('Error sending call completed notification:', error);
+    } else {
+      console.log('Call completed notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Error invoking send-call-completed-notification function:', error);
+  }
+}
+
 interface UseCallsOptions {
   upcoming?: boolean;
   teamMember?: CallTeamMember | 'all';
@@ -206,13 +239,18 @@ export function useCallMutations() {
       if (error) throw error;
       return data as Call;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['calls'] });
       queryClient.invalidateQueries({ queryKey: ['calls-weekly-metrics'] });
       toast({
         title: 'Exito',
         description: 'Llamada actualizada correctamente',
       });
+
+      // Send notification if call was just completed (has result and qualification decision)
+      if (data.call_result && data.qualification?.qualification_decision) {
+        sendCallCompletedNotification(data);
+      }
     },
     onError: (error) => {
       toast({
