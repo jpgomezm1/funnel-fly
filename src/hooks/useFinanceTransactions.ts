@@ -339,6 +339,22 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
     },
   });
 
+  // Toggle recurring active status
+  const toggleRecurringActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const { error } = await supabase
+        .from('finance_transactions')
+        .update({ is_active: isActive })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-metrics'] });
+    },
+  });
+
   // Filter helpers
   const incomeTransactions = transactions.filter(t => t.transaction_type === 'INCOME');
   const expenseTransactions = transactions.filter(t => t.transaction_type === 'EXPENSE');
@@ -373,6 +389,8 @@ export function useFinanceTransactions(filters?: TransactionFilters) {
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    toggleRecurringActive: toggleRecurringActiveMutation.mutateAsync,
+    isTogglingActive: toggleRecurringActiveMutation.isPending,
   };
 }
 

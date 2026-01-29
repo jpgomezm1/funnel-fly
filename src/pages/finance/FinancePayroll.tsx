@@ -46,6 +46,7 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import {
   useEmployees,
   useEmployeeTransactions,
@@ -780,6 +781,42 @@ function EditEmployeeModal({
       return;
     }
 
+    // Helper to sync recurring payroll transactions with employee active status
+    const syncRecurringTransactions = async (employeeName: string, isActive: boolean) => {
+      try {
+        // Find recurring parent transactions matching this employee with PAYROLL category
+        const { data: recurringTxs } = await supabase
+          .from('finance_transactions')
+          .select('id, vendor_or_source, description')
+          .eq('is_recurring', true)
+          .eq('expense_category', 'PAYROLL')
+          .is('parent_transaction_id', null);
+
+        if (!recurringTxs || recurringTxs.length === 0) return 0;
+
+        const nameLower = employeeName.toLowerCase();
+        const matchingIds = recurringTxs
+          .filter(t =>
+            (t.vendor_or_source || '').toLowerCase().includes(nameLower) ||
+            (t.description || '').toLowerCase().includes(nameLower)
+          )
+          .map(t => t.id);
+
+        if (matchingIds.length === 0) return 0;
+
+        const { error } = await supabase
+          .from('finance_transactions')
+          .update({ is_active: isActive })
+          .in('id', matchingIds);
+
+        if (error) throw error;
+        return matchingIds.length;
+      } catch (err) {
+        console.error('Error syncing recurring transactions:', err);
+        return 0;
+      }
+    };
+
     if (isNew) {
       createEmployee(
         {
@@ -806,6 +843,8 @@ function EditEmployeeModal({
         }
       );
     } else {
+      const activeChanged = employee!.is_active !== formData.is_active;
+
       updateEmployee(
         {
           id: employee!.id,
@@ -820,8 +859,21 @@ function EditEmployeeModal({
           notes: formData.notes || null,
         },
         {
-          onSuccess: () => {
-            toast({ title: 'Empleado actualizado exitosamente' });
+          onSuccess: async () => {
+            // If active status changed, sync recurring payroll transactions
+            if (activeChanged) {
+              const count = await syncRecurringTransactions(formData.name, formData.is_active);
+              if (count > 0) {
+                toast({
+                  title: 'Empleado actualizado',
+                  description: `${count} transacción(es) recurrente(s) de nómina ${formData.is_active ? 'reactivada(s)' : 'pausada(s)'}`,
+                });
+              } else {
+                toast({ title: 'Empleado actualizado exitosamente' });
+              }
+            } else {
+              toast({ title: 'Empleado actualizado exitosamente' });
+            }
             onClose();
           },
           onError: () => {
