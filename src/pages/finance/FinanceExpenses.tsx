@@ -115,9 +115,28 @@ export default function FinanceExpenses() {
     isTogglingActive: isTogglingAll,
   } = useFinanceTransactions();
 
-  const recurringParents = allRecurringTransactions.filter(
-    t => t.is_recurring && !t.parent_transaction_id
-  );
+  // Group recurring transactions by description+vendor+category to show one card per group
+  const recurringGroups = (() => {
+    const recurring = allRecurringTransactions.filter(t => t.is_recurring);
+    const groupMap = new Map<string, { representative: FinanceTransaction; ids: string[]; count: number }>();
+
+    recurring.forEach(t => {
+      const key = `${t.description}||${t.vendor_or_source || ''}||${t.expense_category || t.income_category || ''}||${t.recurring_frequency || ''}||${t.transaction_type}`;
+      const existing = groupMap.get(key);
+      if (existing) {
+        existing.ids.push(t.id);
+        existing.count++;
+        // Use the most recent as representative
+        if (t.transaction_date > existing.representative.transaction_date) {
+          existing.representative = t;
+        }
+      } else {
+        groupMap.set(key, { representative: t, ids: [t.id], count: 1 });
+      }
+    });
+
+    return Array.from(groupMap.values());
+  })();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null);
@@ -318,7 +337,7 @@ export default function FinanceExpenses() {
             </TabsTrigger>
             <TabsTrigger value="recurring" className="flex items-center gap-1.5">
               <RefreshCw className="h-4 w-4" />
-              Recurrentes ({recurringParents.length})
+              Recurrentes ({recurringGroups.length})
             </TabsTrigger>
           </TabsList>
 
@@ -409,11 +428,11 @@ export default function FinanceExpenses() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Transacciones Recurrentes ({recurringParents.length})
+                Transacciones Recurrentes ({recurringGroups.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {recurringParents.length === 0 ? (
+              {recurringGroups.length === 0 ? (
                 <div className="text-center py-12">
                   <RefreshCw className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">Sin recurrentes</h3>
@@ -423,92 +442,106 @@ export default function FinanceExpenses() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recurringParents.map((t) => (
-                    <Card key={t.id} className={cn(
-                      "border",
-                      t.is_active === false ? "opacity-60 border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"
-                    )}>
-                      <CardContent className="pt-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold truncate">{t.description}</p>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {t.vendor_or_source || 'Sin proveedor'}
-                            </p>
-                          </div>
-                          <Badge className={cn("text-xs ml-2 flex-shrink-0",
-                            t.is_active === false
-                              ? "bg-red-100 text-red-700"
-                              : "bg-green-100 text-green-700"
-                          )}>
-                            {t.is_active === false ? 'Pausado' : 'Activo'}
-                          </Badge>
-                        </div>
+                  {recurringGroups.map((group) => {
+                    const t = group.representative;
+                    // A group is active if the representative is active
+                    const groupActive = t.is_active !== false;
 
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Monto:</span>
-                          <span className="font-bold text-red-600">
-                            {formatCurrency(t.amount_original, t.currency)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Frecuencia:</span>
-                          <span>{t.recurring_frequency ? RECURRING_FREQUENCY_LABELS[t.recurring_frequency as RecurringFrequency] : 'N/A'}</span>
-                        </div>
-
-                        {t.expense_category && (
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Categoría:</span>
-                            <Badge className={cn("text-xs", EXPENSE_CATEGORY_COLORS[t.expense_category])}>
-                              {EXPENSE_CATEGORY_LABELS[t.expense_category]}
+                    return (
+                      <Card key={group.ids[0]} className={cn(
+                        "border",
+                        !groupActive ? "opacity-60 border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"
+                      )}>
+                        <CardContent className="pt-4 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{t.description}</p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {t.vendor_or_source || 'Sin proveedor'}
+                              </p>
+                            </div>
+                            <Badge className={cn("text-xs ml-2 flex-shrink-0",
+                              !groupActive
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-700"
+                            )}>
+                              {!groupActive ? 'Pausado' : 'Activo'}
                             </Badge>
                           </div>
-                        )}
 
-                        {t.income_category && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Categoría:</span>
-                            <span className="text-xs">{INCOME_CATEGORY_LABELS[t.income_category]}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Tipo:</span>
-                          <Badge variant="outline" className="text-xs">
-                            {t.transaction_type === 'EXPENSE' ? 'Gasto' : 'Ingreso'}
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={t.is_active !== false}
-                              onCheckedChange={(checked) => {
-                                toggleRecurringActiveAll({ id: t.id, isActive: checked });
-                                toast({
-                                  title: checked ? 'Recurrente activado' : 'Recurrente pausado',
-                                  description: t.description,
-                                });
-                              }}
-                              disabled={isTogglingAll}
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {t.is_active === false ? 'Pausado' : 'Activo'}
+                            <span className="text-muted-foreground">Monto:</span>
+                            <span className="font-bold text-red-600">
+                              {formatCurrency(t.amount_original, t.currency)}
                             </span>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenEdit(t)}
-                          >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Editar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Frecuencia:</span>
+                            <span>{t.recurring_frequency ? RECURRING_FREQUENCY_LABELS[t.recurring_frequency as RecurringFrequency] : 'N/A'}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Ocurrencias:</span>
+                            <span className="font-medium">{group.count}</span>
+                          </div>
+
+                          {t.expense_category && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Categoría:</span>
+                              <Badge className={cn("text-xs", EXPENSE_CATEGORY_COLORS[t.expense_category])}>
+                                {EXPENSE_CATEGORY_LABELS[t.expense_category]}
+                              </Badge>
+                            </div>
+                          )}
+
+                          {t.income_category && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Categoría:</span>
+                              <span className="text-xs">{INCOME_CATEGORY_LABELS[t.income_category]}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Tipo:</span>
+                            <Badge variant="outline" className="text-xs">
+                              {t.transaction_type === 'EXPENSE' ? 'Gasto' : 'Ingreso'}
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={groupActive}
+                                onCheckedChange={async (checked) => {
+                                  // Toggle all transactions in this group
+                                  for (const id of group.ids) {
+                                    await toggleRecurringActiveAll({ id, isActive: checked });
+                                  }
+                                  toast({
+                                    title: checked ? 'Recurrente activado' : 'Recurrente pausado',
+                                    description: `${t.description} (${group.count} ocurrencias)`,
+                                  });
+                                }}
+                                disabled={isTogglingAll}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {!groupActive ? 'Pausado' : 'Activo'}
+                              </span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEdit(t)}
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Editar
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
