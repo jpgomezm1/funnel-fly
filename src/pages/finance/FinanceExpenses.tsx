@@ -117,7 +117,7 @@ export default function FinanceExpenses() {
 
   // Group recurring transactions by description+vendor+category to show one card per group
   const recurringGroups = (() => {
-    const recurring = allRecurringTransactions.filter(t => t.is_recurring);
+    const recurring = allRecurringTransactions.filter(t => t.is_recurring && !t.recurring_end_date);
     const groupMap = new Map<string, { representative: FinanceTransaction; ids: string[]; count: number }>();
 
     recurring.forEach(t => {
