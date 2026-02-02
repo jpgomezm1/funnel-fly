@@ -409,10 +409,50 @@ export default function Analytics() {
 
         {/* ==================== DASHBOARD TAB ==================== */}
         <TabsContent value="dashboard" className="mt-6 space-y-6">
-          {/* Main KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-            <Card className="bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
-              <CardContent className="p-3">
+          <DashboardTab
+            revenue={revenue}
+            forecast={forecast}
+            salesVelocity={salesVelocity}
+            activities={activities}
+            clients={clients}
+            projectHealth={projectHealth}
+            activeLeads={activeLeads}
+            leadsThisMonth={leadsThisMonth}
+            mrrChartData={mrrChartData}
+            dealsChartData={dealsChartData}
+            channelChartData={channelChartData}
+            activityChartData={activityChartData}
+            productChartData={productChartData}
+            insights={insights}
+            formatCurrency={formatCurrency}
+            formatPercent={formatPercent}
+          />
+        </TabsContent>
+
+        {/* ==================== REVENUE TAB ==================== */}
+        <TabsContent value="revenue" className="mt-6 space-y-6">
+          <RevenueTab
+            revenue={revenue}
+            forecast={forecast}
+            pipeline={pipeline}
+            mrrChartData={mrrChartData}
+            formatCurrency={formatCurrency}
+            formatPercent={formatPercent}
+          />
+        </TabsContent>
+
+        {/* ==================== PIPELINE TAB ==================== */}
+        <TabsContent value="pipeline" className="mt-6 space-y-6">
+          <PipelineTab
+            pipeline={pipeline}
+            salesVelocity={salesVelocity}
+            activeLeads={activeLeads}
+            leadsThisMonth={leadsThisMonth}
+            formatCurrency={formatCurrency}
+          />
+        </TabsContent>
+
+        {/* __SPLIT_MARKER_1__
                 <div className="flex items-center gap-1.5 mb-1">
                   <DollarSign className="h-3.5 w-3.5 text-green-500" />
                   <span className="text-[10px] text-muted-foreground">MRR</span>

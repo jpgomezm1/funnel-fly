@@ -58,12 +58,12 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { toast } from '@/hooks/use-toast';
 
 const STATUS_ICONS: Record<TaskStatus, React.ElementType> = {
-  BACKLOG: Circle,
-  TODO: Circle,
-  IN_PROGRESS: PlayCircle,
-  IN_REVIEW: PauseCircle,
-  DONE: CheckCircle2,
-  BLOCKED: XCircle,
+  backlog: Circle,
+  todo: Circle,
+  in_progress: PlayCircle,
+  in_review: PauseCircle,
+  done: CheckCircle2,
+  blocked: XCircle,
 };
 
 interface TechProjectTasksTabProps {
@@ -94,8 +94,8 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: 'BACKLOG' as TaskStatus,
-    priority: 'MEDIUM' as TaskPriority,
+    status: 'backlog' as TaskStatus,
+    priority: 'medium' as TaskPriority,
     assigned_to: '',
     due_date: '',
     estimated_hours: '',
@@ -106,8 +106,8 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
     setFormData({
       title: '',
       description: '',
-      status: 'BACKLOG',
-      priority: 'MEDIUM',
+      status: 'backlog',
+      priority: 'medium',
       assigned_to: '',
       due_date: '',
       estimated_hours: '',
@@ -234,10 +234,10 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
                   <div className="flex items-center gap-2">
                     <StatusIcon className={cn(
                       "h-4 w-4",
-                      status === 'DONE' && "text-emerald-600",
-                      status === 'IN_PROGRESS' && "text-amber-600",
-                      status === 'BLOCKED' && "text-red-600",
-                      status === 'IN_REVIEW' && "text-purple-600"
+                      status === 'done' && "text-emerald-600",
+                      status === 'in_progress' && "text-amber-600",
+                      status === 'blocked' && "text-red-600",
+                      status === 'in_review' && "text-purple-600"
                     )} />
                     {TASK_STATUS_LABELS[status]}
                   </div>
@@ -252,8 +252,8 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
                     key={task.id}
                     className={cn(
                       "p-3 cursor-pointer hover:shadow-md transition-shadow",
-                      task.priority === 'URGENT' && "border-l-4 border-l-red-500",
-                      task.priority === 'HIGH' && "border-l-4 border-l-amber-500"
+                      task.priority === 'urgent' && "border-l-4 border-l-red-500",
+                      task.priority === 'high' && "border-l-4 border-l-amber-500"
                     )}
                   >
                     <div className="space-y-2">
