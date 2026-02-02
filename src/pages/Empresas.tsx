@@ -54,7 +54,10 @@ import {
   Activity,
   DollarSign,
   AlertTriangle,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
+import { DeleteCompanyDialog } from '@/components/leads/DeleteCompanyDialog';
 
 // Lead stages (early pipeline stages)
 const LEAD_STAGES: LeadStage[] = ['PROSPECTO', 'CONTACTADO', 'DESCUBRIMIENTO'];
@@ -74,7 +77,7 @@ const STAGE_COLORS: Record<LeadStage, { bg: string; text: string; badge: string 
 };
 
 export default function Empresas() {
-  const { leads, loading: leadsLoading, createLead } = useLeads();
+  const { leads, loading: leadsLoading, createLead, deleteLead } = useLeads();
   const { clients, isLoading: clientsLoading } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
@@ -84,6 +87,8 @@ export default function Empresas() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; projectCount: number } | null>(null);
   const [newLead, setNewLead] = useState({
     company_name: '',
     description: '',
@@ -226,8 +231,9 @@ export default function Empresas() {
   }, [leads, searchTerm, stageFilter, channelFilter, ownerFilter, projectFilter, sortBy, getProjectInfo]);
 
   const handleCreateLead = async () => {
-    if (!newLead.company_name.trim()) return;
+    if (!newLead.company_name.trim() || isCreating) return;
 
+    setIsCreating(true);
     try {
       await createLead(newLead);
       setNewLead({
@@ -244,7 +250,14 @@ export default function Empresas() {
       setCreateDialogOpen(false);
     } catch (error) {
       console.error('Error creating lead:', error);
+    } finally {
+      setIsCreating(false);
     }
+  };
+
+  const handleDeleteLead = async () => {
+    if (!deleteTarget) return;
+    await deleteLead(deleteTarget.id);
   };
 
   const loading = leadsLoading || clientsLoading;
@@ -403,8 +416,15 @@ export default function Empresas() {
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleCreateLead} disabled={!newLead.company_name.trim()}>
-                  Crear Empresa
+                <Button onClick={handleCreateLead} disabled={!newLead.company_name.trim() || isCreating}>
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creando...
+                    </>
+                  ) : (
+                    'Crear Empresa'
+                  )}
                 </Button>
               </div>
             </div>
@@ -754,11 +774,25 @@ export default function Empresas() {
                         {formatDistanceToBogota(lead.last_activity_at)}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                          <Link to={`/empresas/${lead.id}`}>
-                            <ChevronRight className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget({
+                              id: lead.id,
+                              name: lead.company_name,
+                              projectCount: projectInfo.count,
+                            })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                            <Link to={`/empresas/${lead.id}`}>
+                              <ChevronRight className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -768,6 +802,16 @@ export default function Empresas() {
           </Table>
         </div>
       )}
+
+      {/* Delete Company Dialog */}
+      <DeleteCompanyDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        companyName={deleteTarget?.name || ''}
+        hasProjects={(deleteTarget?.projectCount || 0) > 0}
+        projectCount={deleteTarget?.projectCount || 0}
+        onConfirm={handleDeleteLead}
+      />
 
       {/* Cards View */}
       {viewMode === 'cards' && (

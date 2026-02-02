@@ -118,8 +118,8 @@ export const useLeads = () => {
         throw error;
       }
 
-      setLeads(prevLeads => [data, ...prevLeads]);
-      
+      // No optimistic update — let the realtime subscription handle it via fetchLeads()
+
       // Enviar notificación de email para nuevo lead
       try {
         await notifyNewLead(data);
@@ -213,6 +213,78 @@ export const useLeads = () => {
     }
   };
 
+  const deleteLead = async (leadId: string) => {
+    try {
+      // 1. Check if a client exists for this lead
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('original_lead_id', leadId)
+        .maybeSingle();
+
+      if (clientData) {
+        // 2. Get all projects for this client
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('client_id', clientData.id);
+
+        const projectIds = projects?.map(p => p.id) || [];
+
+        if (projectIds.length > 0) {
+          // Delete all project-related data
+          const projectTables = [
+            'deals', 'proposals', 'project_tasks', 'project_milestones',
+            'project_checklist_items', 'project_documents', 'project_events',
+            'project_updates', 'project_dependencies', 'project_env_variables',
+            'project_repositories', 'project_time_logs', 'invoices',
+          ];
+
+          for (const table of projectTables) {
+            await supabase.from(table).delete().in('project_id', projectIds);
+          }
+
+          // Delete projects
+          await supabase.from('projects').delete().eq('client_id', clientData.id);
+        }
+
+        // Delete client contacts and documents
+        await supabase.from('client_contacts').delete().eq('client_id', clientData.id);
+        await supabase.from('company_documents').delete().eq('client_id', clientData.id);
+
+        // Delete client
+        await supabase.from('clients').delete().eq('id', clientData.id);
+      }
+
+      // 3. Delete lead-related data
+      await supabase.from('lead_contacts').delete().eq('lead_id', leadId);
+      await supabase.from('lead_activities').delete().eq('lead_id', leadId);
+      await supabase.from('lead_stage_history').delete().eq('lead_id', leadId);
+      await supabase.from('company_documents').delete().eq('lead_id', leadId);
+      await supabase.from('calls').delete().eq('lead_id', leadId);
+
+      // 4. Delete the lead itself
+      const { error } = await supabase.from('leads').delete().eq('id', leadId);
+      if (error) throw error;
+
+      setLeads(prevLeads => prevLeads.filter(l => l.id !== leadId));
+
+      toast({
+        title: 'Éxito',
+        description: 'Empresa eliminada correctamente',
+      });
+    } catch (err) {
+      console.error('Error deleting lead:', err);
+      const message = err instanceof Error ? err.message : 'Error al eliminar empresa';
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
+      throw err;
+    }
+  };
+
   useEffect(() => {
     fetchLeads();
 
@@ -246,6 +318,7 @@ export const useLeads = () => {
     createLead,
     updateLead,
     addNote,
+    deleteLead,
   };
 };
 

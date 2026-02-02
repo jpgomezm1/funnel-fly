@@ -51,6 +51,7 @@ import { LeadActivityLog } from '@/components/leads/LeadActivityLog';
 import { ConvertToProjectModal } from '@/components/leads/ConvertToProjectModal';
 import { LeadContactModal } from '@/components/leads/LeadContactModal';
 import { EditLeadCompanyModal } from '@/components/leads/EditLeadCompanyModal';
+import { DeleteCompanyDialog } from '@/components/leads/DeleteCompanyDialog';
 import { CompanyDocumentsCard } from '@/components/documents/CompanyDocumentsCard';
 import { formatDateToBogota, formatDistanceToBogota } from '@/lib/date-utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -184,7 +185,7 @@ export default function EmpresaDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { leads, updateLead, updateLeadStage } = useLeads();
+  const { leads, updateLead, updateLeadStage, deleteLead } = useLeads();
   const { timeline, isLoading: timelineLoading, refreshTimeline } = useLeadTimeline(id);
   const { data: clientWithProjects, isLoading: clientLoading, refetch: refetchClient } = useClientForLead(id);
   const {
@@ -207,6 +208,7 @@ export default function EmpresaDetail() {
   const [editingContact, setEditingContact] = useState<LeadContact | undefined>();
   const [deletingContact, setDeletingContact] = useState<LeadContact | null>(null);
   const [savingCompany, setSavingCompany] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const lead = leads.find(l => l.id === id);
 
@@ -348,6 +350,12 @@ export default function EmpresaDetail() {
     }
   };
 
+  const handleDeleteCompany = async () => {
+    if (!id) return;
+    await deleteLead(id);
+    navigate('/empresas');
+  };
+
   if (!lead) {
     return (
       <div className="space-y-6">
@@ -483,6 +491,16 @@ export default function EmpresaDetail() {
           <Button onClick={() => setLeadEditModalOpen(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Info Lead
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar
           </Button>
         </div>
       </div>
@@ -1296,6 +1314,16 @@ export default function EmpresaDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Company Dialog */}
+      <DeleteCompanyDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        companyName={lead.company_name}
+        hasProjects={hasProjects || false}
+        projectCount={clientWithProjects?.projects?.length || 0}
+        onConfirm={handleDeleteCompany}
+      />
     </div>
   );
 }
