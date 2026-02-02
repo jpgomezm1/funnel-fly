@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { TechTeamMemberId, TECH_TEAM_MEMBERS, TaskStatus } from '@/types/database';
+import { TechTeamMemberId, TaskStatus } from '@/types/database';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 interface TeamMemberMetrics {
   id: TechTeamMemberId;
@@ -25,8 +26,11 @@ interface ProjectMetrics {
 }
 
 export function useTechMetrics() {
+  const { techMembers } = useTeamMembers();
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['tech-metrics'],
+    queryKey: ['tech-metrics', techMembers.map(m => m.slug)],
+    enabled: techMembers.length > 0,
     queryFn: async () => {
       const now = new Date();
       const startOfWeek = new Date(now);
@@ -60,9 +64,9 @@ export function useTechMetrics() {
       if (projectsError) throw projectsError;
 
       // Calculate team member metrics
-      const teamMetrics: TeamMemberMetrics[] = TECH_TEAM_MEMBERS.map(member => {
-        const memberLogs = timeLogs?.filter(l => l.logged_by === member.id) || [];
-        const memberTasks = tasks?.filter(t => t.assigned_to === member.id) || [];
+      const teamMetrics: TeamMemberMetrics[] = techMembers.map(member => {
+        const memberLogs = timeLogs?.filter(l => l.logged_by === member.slug || member.slug.startsWith(l.logged_by)) || [];
+        const memberTasks = tasks?.filter(t => t.assigned_to === member.slug || (t.assigned_to && member.slug.startsWith(t.assigned_to))) || [];
 
         const totalHours = memberLogs.reduce((sum, l) => sum + l.hours, 0);
 
@@ -75,7 +79,7 @@ export function useTechMetrics() {
           .reduce((sum, l) => sum + l.hours, 0);
 
         return {
-          id: member.id,
+          id: member.slug as TechTeamMemberId,
           name: member.name,
           color: member.color,
           totalHours,
@@ -119,9 +123,9 @@ export function useTechMetrics() {
         return {
           date,
           hours: dayLogs.reduce((sum, l) => sum + l.hours, 0),
-          byMember: TECH_TEAM_MEMBERS.reduce((acc, member) => {
-            acc[member.id] = dayLogs
-              .filter(l => l.logged_by === member.id)
+          byMember: techMembers.reduce((acc, member) => {
+            acc[member.slug as TechTeamMemberId] = dayLogs
+              .filter(l => l.logged_by === member.slug || member.slug.startsWith(l.logged_by))
               .reduce((sum, l) => sum + l.hours, 0);
             return acc;
           }, {} as Record<TechTeamMemberId, number>),

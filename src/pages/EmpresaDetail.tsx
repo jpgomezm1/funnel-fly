@@ -70,6 +70,9 @@ import {
   ProjectStage,
   DealStatus,
   ClientWithProjects,
+  LossReason,
+  LOSS_REASON_LABELS,
+  LOSS_REASON_COLORS,
 } from '@/types/database';
 import {
   AlertDialog,
@@ -81,6 +84,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 // Hook para obtener el cliente asociado a este lead con sus proyectos
 function useClientForLead(leadId?: string) {
@@ -134,13 +138,6 @@ function useClientForLead(leadId?: string) {
   });
 }
 
-const COMERCIALES_MAP: Record<string, string> = {
-  'juan_pablo_gomez': 'Juan Pablo Gomez',
-  'agustin_hoyos': 'Agustin Hoyos',
-  'sara_garces': 'Sara Garces',
-  'pamela_puello': 'Pamela Puello'
-};
-
 const STAGE_COLORS: Record<LeadStage, { bg: string; text: string; badge: string }> = {
   PROSPECTO: { bg: 'bg-slate-500', text: 'text-slate-700', badge: 'bg-slate-100 text-slate-700 border-slate-200' },
   CONTACTADO: { bg: 'bg-blue-500', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -180,6 +177,7 @@ const getDealStatusIcon = (status: DealStatus) => {
 };
 
 export default function EmpresaDetail() {
+  const { getMemberName } = useTeamMembers();
   const { empresaId } = useParams<{ empresaId: string }>();
   const id = empresaId;
   const navigate = useNavigate();
@@ -419,6 +417,11 @@ export default function EmpresaDetail() {
               <Badge className={cn("text-white border-0", stageColors.bg)}>
                 {STAGE_LABELS[lead.stage]}
               </Badge>
+              {lead.stage === 'CERRADO_PERDIDO' && lead.loss_reason && (
+                <Badge className={cn("border-0", LOSS_REASON_COLORS[lead.loss_reason as LossReason])}>
+                  {LOSS_REASON_LABELS[lead.loss_reason as LossReason]}
+                </Badge>
+              )}
               {hasProjects && (
                 <Badge variant="outline" className="gap-1">
                   <Briefcase className="h-3 w-3" />
@@ -690,7 +693,7 @@ export default function EmpresaDetail() {
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">Propietario</p>
                       <p className="text-sm font-medium">
-                        {COMERCIALES_MAP[lead.owner_id as keyof typeof COMERCIALES_MAP] || 'Sin asignar'}
+                        {getMemberName(lead.owner_id)}
                       </p>
                     </div>
                   </div>

@@ -52,10 +52,9 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_PRIORITY_COLORS,
   TASK_STATUS_ORDER,
-  TECH_TEAM_MEMBERS,
-  TechTeamMemberId,
   ProjectTask,
 } from '@/types/database';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { toast } from '@/hooks/use-toast';
 
 const STATUS_ICONS: Record<TaskStatus, React.ElementType> = {
@@ -83,6 +82,13 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
     isCreating,
   } = useProjectTasks(projectId);
 
+  const { techMembers } = useTeamMembers();
+
+  const findMemberByValue = (value: string | null | undefined) => {
+    if (!value) return undefined;
+    return techMembers.find(m => m.slug === value || m.slug.startsWith(value));
+  };
+
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
   const [formData, setFormData] = useState({
@@ -90,7 +96,7 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
     description: '',
     status: 'BACKLOG' as TaskStatus,
     priority: 'MEDIUM' as TaskPriority,
-    assigned_to: '' as TechTeamMemberId | '',
+    assigned_to: '',
     due_date: '',
     estimated_hours: '',
     tags: '',
@@ -289,7 +295,7 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
                         {task.assigned_to && (
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {TECH_TEAM_MEMBERS.find(m => m.id === task.assigned_to)?.name || task.assigned_to}
+                            {findMemberByValue(task.assigned_to)?.name || task.assigned_to}
                           </div>
                         )}
                         {task.estimated_hours && (
@@ -411,14 +417,14 @@ export function TechProjectTasksTab({ projectId }: TechProjectTasksTabProps) {
                 <Label>Asignado a</Label>
                 <Select
                   value={formData.assigned_to}
-                  onValueChange={(v) => setFormData({ ...formData, assigned_to: v as TechTeamMemberId })}
+                  onValueChange={(v) => setFormData({ ...formData, assigned_to: v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sin asignar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TECH_TEAM_MEMBERS.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
+                    {techMembers.map((member) => (
+                      <SelectItem key={member.slug} value={member.slug}>
                         {member.name}
                       </SelectItem>
                     ))}

@@ -88,6 +88,9 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import DashboardTab from '@/components/analytics/DashboardTab';
+import RevenueTab from '@/components/analytics/RevenueTab';
+import PipelineTab from '@/components/analytics/PipelineTab';
 
 // Labels and Colors
 const STAGE_LABELS: Record<string, string> = {

@@ -58,6 +58,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { DeleteCompanyDialog } from '@/components/leads/DeleteCompanyDialog';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 // Lead stages (early pipeline stages)
 const LEAD_STAGES: LeadStage[] = ['PROSPECTO', 'CONTACTADO', 'DESCUBRIMIENTO'];
@@ -77,6 +78,7 @@ const STAGE_COLORS: Record<LeadStage, { bg: string; text: string; badge: string 
 };
 
 export default function Empresas() {
+  const { salesMembers, getMemberName } = useTeamMembers();
   const { leads, loading: leadsLoading, createLead, deleteLead } = useLeads();
   const { clients, isLoading: clientsLoading } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,13 +101,6 @@ export default function Empresas() {
     owner_id: '',
     notes: '',
   });
-
-  const COMERCIALES_MAP: Record<string, string> = {
-    'juan_pablo_gomez': 'Juan Pablo Gomez',
-    'agustin_hoyos': 'Agustin Hoyos',
-    'sara_garces': 'Sara Garces',
-    'pamela_puello': 'Pamela Puello'
-  };
 
   // Create a map of lead_id to client for quick lookup
   const clientsByLeadId = useMemo(() =>
@@ -404,9 +399,9 @@ export default function Empresas() {
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(COMERCIALES_MAP).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
+                    {salesMembers.map((m) => (
+                      <SelectItem key={m.slug} value={m.slug}>
+                        {m.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -602,9 +597,9 @@ export default function Empresas() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {Object.entries(COMERCIALES_MAP).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
+              {salesMembers.map((m) => (
+                <SelectItem key={m.slug} value={m.slug}>
+                  {m.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -752,7 +747,7 @@ export default function Empresas() {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {COMERCIALES_MAP[lead.owner_id as keyof typeof COMERCIALES_MAP] || '-'}
+                          {getMemberName(lead.owner_id) === 'Sin asignar' ? '-' : getMemberName(lead.owner_id)}
                         </span>
                       </TableCell>
                       <TableCell>

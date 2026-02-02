@@ -34,6 +34,28 @@ export type LeadSubchannel =
   | 'LANDING_PAGE'
   | 'OTRO';
 
+export type LossReason = 'PRECIO' | 'TIMING' | 'COMPETENCIA' | 'SIN_PRESUPUESTO' | 'NO_RESPONDE' | 'NO_NECESIDAD' | 'OTRO';
+
+export const LOSS_REASON_LABELS: Record<LossReason, string> = {
+  'PRECIO': 'Precio',
+  'TIMING': 'Timing',
+  'COMPETENCIA': 'Competencia',
+  'SIN_PRESUPUESTO': 'Sin Presupuesto',
+  'NO_RESPONDE': 'No Responde',
+  'NO_NECESIDAD': 'No Necesidad',
+  'OTRO': 'Otro',
+};
+
+export const LOSS_REASON_COLORS: Record<LossReason, string> = {
+  'PRECIO': 'bg-amber-100 text-amber-700',
+  'TIMING': 'bg-blue-100 text-blue-700',
+  'COMPETENCIA': 'bg-purple-100 text-purple-700',
+  'SIN_PRESUPUESTO': 'bg-red-100 text-red-700',
+  'NO_RESPONDE': 'bg-slate-100 text-slate-700',
+  'NO_NECESIDAD': 'bg-orange-100 text-orange-700',
+  'OTRO': 'bg-gray-100 text-gray-700',
+};
+
 export interface Lead {
   id: string;
   company_name: string;
@@ -55,7 +77,67 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   product_tag: string;
+  loss_reason?: LossReason;
+  loss_reason_notes?: string;
 }
+
+// Company types (unified leads + clients)
+export type CompanyStatus = 'prospect' | 'client' | 'churned';
+
+export interface Company {
+  id: string;
+  company_name: string;
+  contact_name?: string;
+  contact_role?: string;
+  phone?: string;
+  email?: string;
+  status: CompanyStatus;
+  channel?: string;
+  subchannel?: string;
+  owner_id?: string;
+  stage?: string;
+  stage_entered_at?: string;
+  last_activity_at?: string;
+  product_tag?: string;
+  loss_reason?: LossReason;
+  loss_reason_notes?: string;
+  notes?: string;
+  description?: string;
+  linkedin_url?: string;
+  website_url?: string;
+  deleted_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyContact {
+  id: string;
+  company_id: string;
+  name: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  description?: string;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyWithProjects extends Company {
+  projects?: ProjectWithRelations[];
+}
+
+export const COMPANY_STATUS_LABELS: Record<CompanyStatus, string> = {
+  'prospect': 'Prospecto',
+  'client': 'Cliente',
+  'churned': 'Churned',
+};
+
+export const COMPANY_STATUS_COLORS: Record<CompanyStatus, string> = {
+  'prospect': 'bg-blue-100 text-blue-700',
+  'client': 'bg-emerald-100 text-emerald-700',
+  'churned': 'bg-red-100 text-red-700',
+};
 
 // Lead Contact types
 export interface LeadContact {
@@ -620,14 +702,7 @@ export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'don
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type EnvironmentType = 'development' | 'staging' | 'production';
 
-// Team members (hardcoded for now)
-export const TECH_TEAM_MEMBERS = [
-  { id: 'juan_pablo', name: 'Juan Pablo', color: 'bg-blue-500' },
-  { id: 'juan_david', name: 'Juan David', color: 'bg-emerald-500' },
-  { id: 'juan_jose', name: 'Juan José', color: 'bg-purple-500' },
-] as const;
-
-export type TechTeamMemberId = typeof TECH_TEAM_MEMBERS[number]['id'];
+export type TechTeamMemberId = string;
 
 // Project Repository
 export interface ProjectRepository {

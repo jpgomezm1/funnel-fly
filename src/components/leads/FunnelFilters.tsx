@@ -32,14 +32,7 @@ import {
   Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// Comerciales disponibles (misma lista que en LeadEditModal)
-const COMERCIALES: Record<string, string> = {
-  'juan_pablo_gomez': 'Juan Pablo Gomez',
-  'agustin_hoyos': 'Agustin Hoyos',
-  'sara_garces': 'Sara Garces',
-  'pamela_puello': 'Pamela Puello'
-};
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 // Channel icons mapping
 const CHANNEL_ICONS: Record<LeadChannel, React.ElementType> = {
@@ -65,6 +58,7 @@ interface FunnelFiltersProps {
 }
 
 export function FunnelFilters({ filters, onFiltersChange }: FunnelFiltersProps) {
+  const { salesMembers, getMemberName } = useTeamMembers();
   const [showFilters, setShowFilters] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -262,7 +256,7 @@ export function FunnelFilters({ filters, onFiltersChange }: FunnelFiltersProps) 
           {filters.owner && (
             <Badge variant="secondary" className="gap-2 py-1 px-3 bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
               <User className="h-3 w-3" />
-              {filters.owner === 'sin-asignar' ? 'Sin asignar' : COMERCIALES[filters.owner] || filters.owner}
+              {filters.owner === 'sin-asignar' ? 'Sin asignar' : getMemberName(filters.owner)}
               <Button
                 variant="ghost"
                 size="sm"
@@ -421,11 +415,11 @@ export function FunnelFilters({ filters, onFiltersChange }: FunnelFiltersProps) 
                         Sin asignar
                       </span>
                     </SelectItem>
-                    {Object.entries(COMERCIALES).map(([id, name]) => (
-                      <SelectItem key={id} value={id}>
+                    {salesMembers.map((m) => (
+                      <SelectItem key={m.slug} value={m.slug}>
                         <span className="flex items-center gap-2">
                           <User className="h-4 w-4 text-emerald-500" />
-                          {name}
+                          {m.name}
                         </span>
                       </SelectItem>
                     ))}

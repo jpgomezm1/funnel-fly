@@ -6,10 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Lead, LeadChannel, LeadSubchannel, CHANNEL_LABELS, SUBCHANNEL_LABELS } from '@/types/database';
 import { Building, User, Phone, Mail, Activity, Target, Save, X, Sparkles } from 'lucide-react';
-import { cn, COMERCIALES_NAMES } from '@/lib/utils';
-
-// Usar el mapeo de comerciales centralizado
-const COMERCIALES = COMERCIALES_NAMES;
+import { cn } from '@/lib/utils';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 interface LeadEditModalProps {
   open: boolean;
@@ -19,6 +17,7 @@ interface LeadEditModalProps {
 }
 
 export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProps) {
+  const { salesMembers } = useTeamMembers();
   const [formData, setFormData] = useState<Partial<Lead>>({});
   const [loading, setLoading] = useState(false);
 
@@ -243,9 +242,9 @@ export function LeadEditModal({ open, onClose, onSave, lead }: LeadEditModalProp
                       <SelectItem value="unassigned" className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
                         Sin asignar
                       </SelectItem>
-                      {Object.entries(COMERCIALES).map(([key, label]) => (
-                        <SelectItem key={key} value={key} className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
-                          {label}
+                      {salesMembers.map((m) => (
+                        <SelectItem key={m.slug} value={m.slug} className="hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg m-1">
+                          {m.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Lead, LeadStage, LeadStageHistory, LeadContact } from '@/types/database';
+import { Lead, LeadStage, LeadStageHistory, LeadContact, LossReason } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
 import { useEmailNotifications } from './useEmailNotifications';
 
@@ -34,18 +34,24 @@ export const useLeads = () => {
     }
   };
 
-  const updateLeadStage = async (leadId: string, newStage: LeadStage) => {
+  const updateLeadStage = async (leadId: string, newStage: LeadStage, lossReason?: LossReason, lossReasonNotes?: string) => {
     try {
       // Encontrar el lead actual para obtener la etapa anterior
       const currentLead = leads.find(lead => lead.id === leadId);
       const previousStage = currentLead?.stage;
 
+      const updateData: Record<string, unknown> = {
+        stage: newStage,
+        last_activity_at: new Date().toISOString(),
+      };
+      if (newStage === 'CERRADO_PERDIDO' && lossReason) {
+        updateData.loss_reason = lossReason;
+        updateData.loss_reason_notes = lossReasonNotes || null;
+      }
+
       const { error } = await supabase
         .from('leads')
-        .update({ 
-          stage: newStage,
-          last_activity_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', leadId);
 
       if (error) throw error;

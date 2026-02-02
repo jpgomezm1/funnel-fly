@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { TechTeamMemberId, TECH_TEAM_MEMBERS } from '@/types/database';
-
 // DB schema has: logged_by (text), logged_date (date), hours (numeric)
 interface ProjectTimeLogDB {
   id: string;

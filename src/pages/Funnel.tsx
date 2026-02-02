@@ -25,6 +25,7 @@ import { FunnelColumn } from '@/components/leads/FunnelColumn';
 import { FunnelFilters } from '@/components/leads/FunnelFilters';
 import { ConvertToProjectModal } from '@/components/leads/ConvertToProjectModal';
 import { CreateDealModal } from '@/components/projects/CreateDealModal';
+import { LossReasonModal } from '@/components/leads/LossReasonModal';
 import { useLeads } from '@/hooks/useLeads';
 import { usePipelineProjects } from '@/hooks/useProjects';
 import { useLeadDeals } from '@/hooks/useDeals';
@@ -78,6 +79,9 @@ export default function Funnel() {
 
   const [dealModalOpen, setDealModalOpen] = useState(false);
   const [pendingProjectForDeal, setPendingProjectForDeal] = useState<ProjectWithRelations | null>(null);
+
+  const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
+  const [pendingLossLead, setPendingLossLead] = useState<Lead | null>(null);
 
   const [filters, setFilters] = useState({
     dateRange: null as { from: Date; to: Date } | null,
@@ -263,8 +267,12 @@ export default function Funnel() {
 
       // Lead moving to a new stage
       if (currentStage !== targetStage) {
-        // If moving to DEMOSTRACION or beyond, need to convert to project
-        if (PROJECT_STAGES.includes(targetStage as ProjectStage)) {
+        if (targetStage === 'CERRADO_PERDIDO') {
+          // Intercept: show loss reason modal
+          setPendingLossLead(lead);
+          setLossReasonModalOpen(true);
+        } else if (PROJECT_STAGES.includes(targetStage as ProjectStage)) {
+          // If moving to DEMOSTRACION or beyond, need to convert to project
           setPendingLeadForConvert(lead);
           setConvertModalOpen(true);
         } else {
@@ -555,6 +563,23 @@ export default function Funnel() {
           }}
           project={pendingProjectForDeal}
           onSuccess={handleDealSuccess}
+        />
+      )}
+
+      {/* Loss Reason Modal */}
+      {pendingLossLead && (
+        <LossReasonModal
+          open={lossReasonModalOpen}
+          onClose={() => {
+            setLossReasonModalOpen(false);
+            setPendingLossLead(null);
+          }}
+          companyName={pendingLossLead.company_name}
+          onConfirm={async (lossReason, notes) => {
+            await updateLeadStage(pendingLossLead.id, 'CERRADO_PERDIDO', lossReason, notes);
+            setLossReasonModalOpen(false);
+            setPendingLossLead(null);
+          }}
         />
       )}
     </div>

@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { AIChatWidget } from '@/components/ai-assistant';
+import { NotificationBell } from '@/components/layout/NotificationBell';
+import { GlobalSearch } from '@/components/GlobalSearch';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -278,10 +280,20 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main content */}
       <main className="flex-1 min-w-0">
-        <div className="h-full p-6 lg:p-8 pt-16 lg:pt-8">
+        {/* Top bar with notifications */}
+        <div className="hidden lg:flex items-center justify-end gap-2 px-8 pt-4 pb-0">
+          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex text-muted-foreground">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+          <NotificationBell />
+        </div>
+        <div className="h-full p-6 lg:p-8 pt-16 lg:pt-2">
           {children}
         </div>
       </main>
+
+      {/* Global Search */}
+      <GlobalSearch />
 
       {/* AI Assistant Widget */}
       <AIChatWidget />

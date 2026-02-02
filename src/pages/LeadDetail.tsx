@@ -38,6 +38,7 @@ import {
   LeadStage,
   Lead
 } from '@/types/database';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 // Hook para verificar si existe un cliente asociado a este lead
 function useClientForLead(leadId?: string) {
@@ -59,13 +60,6 @@ function useClientForLead(leadId?: string) {
   });
 }
 
-const COMERCIALES_MAP = {
-  'juan_pablo_gomez': 'Juan Pablo Gomez',
-  'agustin_hoyos': 'Agustin Hoyos',
-  'sara_garces': 'Sara Garces',
-  'pamela_puello': 'Pamela Puello'
-} as const;
-
 const getStageColor = (stage: LeadStage) => {
   const colors: Record<LeadStage, string> = {
     'PROSPECTO': 'bg-slate-500',
@@ -80,6 +74,7 @@ const getStageColor = (stage: LeadStage) => {
 };
 
 export default function LeadDetail() {
+  const { getMemberName } = useTeamMembers();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -299,7 +294,7 @@ export default function LeadDetail() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Propietario</p>
                   <p className="text-sm">
-                    {COMERCIALES_MAP[lead.owner_id as keyof typeof COMERCIALES_MAP] || 'Sin asignar'}
+                    {getMemberName(lead.owner_id)}
                   </p>
                 </div>
               </div>

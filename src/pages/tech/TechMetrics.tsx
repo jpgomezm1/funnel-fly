@@ -18,8 +18,8 @@ import { useTechMetrics } from '@/hooks/useTechMetrics';
 import {
   TASK_STATUS_LABELS,
   TASK_STATUS_COLORS,
-  TECH_TEAM_MEMBERS,
 } from '@/types/database';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 
@@ -33,6 +33,13 @@ export default function TechMetrics() {
     summary,
     isLoading,
   } = useTechMetrics();
+
+  const { techMembers } = useTeamMembers();
+
+  const findMemberByValue = (value: string | null | undefined) => {
+    if (!value) return undefined;
+    return techMembers.find(m => m.slug === value || m.slug.startsWith(value));
+  };
 
   if (isLoading) {
     return (
@@ -269,7 +276,7 @@ export default function TechMetrics() {
           <CardContent>
             <div className="space-y-3">
               {recentActivity.map((activity) => {
-                const member = TECH_TEAM_MEMBERS.find(m => m.id === activity.teamMember);
+                const member = findMemberByValue(activity.teamMember);
 
                 return (
                   <div key={activity.id} className="flex items-start gap-3">

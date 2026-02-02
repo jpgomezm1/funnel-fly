@@ -40,10 +40,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useProjectTimeLogs } from '@/hooks/useProjectTimeLogs';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
-import {
-  TECH_TEAM_MEMBERS,
-  TechTeamMemberId,
-} from '@/types/database';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { toast } from '@/hooks/use-toast';
 
 interface TechProjectTimeLogsTabProps {
@@ -71,6 +68,12 @@ export function TechProjectTimeLogsTab({ projectId }: TechProjectTimeLogsTabProp
   } = useProjectTimeLogs(projectId);
 
   const { tasks } = useProjectTasks(projectId);
+  const { techMembers, getMemberBySlug } = useTeamMembers();
+
+  const findMemberByValue = (value: string | null | undefined) => {
+    if (!value) return undefined;
+    return techMembers.find(m => m.slug === value || m.slug.startsWith(value));
+  };
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<any | null>(null);
@@ -172,8 +175,8 @@ export function TechProjectTimeLogsTab({ projectId }: TechProjectTimeLogsTabProp
 
       {/* Stats by member */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {TECH_TEAM_MEMBERS.map((member) => (
-          <Card key={member.id}>
+        {techMembers.map((member) => (
+          <Card key={member.slug}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className={cn(
@@ -184,7 +187,7 @@ export function TechProjectTimeLogsTab({ projectId }: TechProjectTimeLogsTabProp
                 </div>
                 <div>
                   <p className="font-medium">{member.name}</p>
-                  <p className="text-2xl font-bold">{hoursByMember[member.id] || 0}h</p>
+                  <p className="text-2xl font-bold">{hoursByMember[member.slug] || 0}h</p>
                 </div>
               </div>
             </CardContent>
@@ -216,7 +219,7 @@ export function TechProjectTimeLogsTab({ projectId }: TechProjectTimeLogsTabProp
           <CardContent>
             <div className="divide-y">
               {timeLogs.map((log) => {
-                const member = TECH_TEAM_MEMBERS.find(m => m.id === log.logged_by);
+                const member = findMemberByValue(log.logged_by);
                 const task = log.project_tasks;
 
                 return (
@@ -310,8 +313,8 @@ export function TechProjectTimeLogsTab({ projectId }: TechProjectTimeLogsTabProp
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TECH_TEAM_MEMBERS.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
+                    {techMembers.map((member) => (
+                      <SelectItem key={member.slug} value={member.slug}>
                         {member.name}
                       </SelectItem>
                     ))}
