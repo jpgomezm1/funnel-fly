@@ -53,7 +53,6 @@ interface CallCardProps {
 
 // Team member colors for avatars
 const TEAM_MEMBER_COLORS: Record<CallTeamMember, string> = {
-  pamela: 'bg-pink-500',
   juan_pablo: 'bg-blue-500',
   sara: 'bg-purple-500',
   agustin: 'bg-emerald-500',

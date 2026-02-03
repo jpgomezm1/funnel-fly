@@ -40,6 +40,13 @@ import { TechProjectTasksTab } from '@/components/tech/TechProjectTasksTab';
 import { TechProjectRepositoriesTab } from '@/components/tech/TechProjectRepositoriesTab';
 import { TechProjectTimeLogsTab } from '@/components/tech/TechProjectTimeLogsTab';
 import { TechProjectEnvTab } from '@/components/tech/TechProjectEnvTab';
+import { TechProjectEventsTab } from '@/components/tech/TechProjectEventsTab';
+import { TechProjectDocumentsTab } from '@/components/tech/TechProjectDocumentsTab';
+import { TechProjectDependenciesTab } from '@/components/tech/TechProjectDependenciesTab';
+
+// Hooks for counts
+import { useProjectEvents } from '@/hooks/useProjectEvents';
+import { useProjectDocuments } from '@/hooks/useProjectDocuments';
 
 // Reuse Sales components for shared functionality
 import { ProjectTabExecution } from '@/components/projects/tabs/ProjectTabExecution';
@@ -56,6 +63,8 @@ const EXECUTION_STAGE_ICONS: Record<ProjectExecutionStage, React.ElementType> = 
 export default function TechProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
   const { project, isLoading, refetch } = useTechProject(projectId);
+  const { events, getStats: getEventStats } = useProjectEvents({ projectId });
+  const { documents } = useProjectDocuments({ projectId });
   const [activeTab, setActiveTab] = useState('overview');
 
   if (isLoading) {
@@ -141,7 +150,7 @@ export default function TechProjectDetail() {
       )}
 
       {/* Quick Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -193,6 +202,34 @@ export default function TechProjectDetail() {
               <div>
                 <p className="text-2xl font-bold">{project.repositories?.length || 0}</p>
                 <p className="text-xs text-muted-foreground">Repositorios</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{events.length}</p>
+                <p className="text-xs text-muted-foreground">Eventos</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-cyan-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{documents.length}</p>
+                <p className="text-xs text-muted-foreground">Documentos</p>
               </div>
             </div>
           </CardContent>
@@ -251,7 +288,7 @@ export default function TechProjectDetail() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="overview" className="flex items-center gap-1.5">
             <ListChecks className="h-4 w-4" />
             <span className="hidden sm:inline">General</span>
@@ -272,6 +309,18 @@ export default function TechProjectDetail() {
             <FileKey className="h-4 w-4" />
             <span className="hidden sm:inline">Variables</span>
           </TabsTrigger>
+          <TabsTrigger value="events" className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">Eventos</span>
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center gap-1.5">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Docs</span>
+          </TabsTrigger>
+          <TabsTrigger value="dependencies" className="flex items-center gap-1.5">
+            <Package className="h-4 w-4" />
+            <span className="hidden sm:inline">Deps</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab - Execution info + Updates */}
@@ -290,6 +339,31 @@ export default function TechProjectDetail() {
               }}
               onRefetch={refetch}
             />
+
+            {/* Recent Activity */}
+            {events.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Actividad Reciente
+                </h3>
+                <div className="space-y-2">
+                  {events.slice(0, 5).map((event) => (
+                    <Card key={event.id}>
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{event.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDateToBogota(event.event_date, 'dd MMM yyyy')} · {event.event_type}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Engineering Updates Section */}
             <div>
@@ -320,6 +394,21 @@ export default function TechProjectDetail() {
         {/* Environment Variables Tab */}
         <TabsContent value="env" className="mt-6">
           <TechProjectEnvTab projectId={projectId!} />
+        </TabsContent>
+
+        {/* Events Tab */}
+        <TabsContent value="events" className="mt-6">
+          <TechProjectEventsTab projectId={projectId!} />
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="mt-6">
+          <TechProjectDocumentsTab projectId={projectId!} />
+        </TabsContent>
+
+        {/* Dependencies Tab */}
+        <TabsContent value="dependencies" className="mt-6">
+          <TechProjectDependenciesTab projectId={projectId!} />
         </TabsContent>
       </Tabs>
     </div>

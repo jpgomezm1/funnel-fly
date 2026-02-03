@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { differenceInDays } from 'date-fns';
+import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 
 // Union type for items in the pipeline
 type PipelineItem =
@@ -70,6 +71,7 @@ export default function Funnel() {
   const { leads, loading: leadsLoading, updateLeadStage } = useLeads();
   const { projects, isLoading: projectsLoading, updateProjectStage } = usePipelineProjects();
   const { dealsMap } = useLeadDeals(leads.map(lead => lead.id));
+  const { notifyProjectStageChange } = useEmailNotifications();
 
   const [activeItem, setActiveItem] = useState<PipelineItem | null>(null);
 
@@ -296,6 +298,17 @@ export default function Funnel() {
             await updateProjectStage({ projectId: project.id, newStage: targetStage as ProjectStage });
           } else {
             await updateProjectStage({ projectId: project.id, newStage: targetStage as ProjectStage });
+          }
+
+          // Send email notification for pipeline movement
+          try {
+            await notifyProjectStageChange(
+              project,
+              currentStage as ProjectStage,
+              targetStage as ProjectStage
+            );
+          } catch (emailError) {
+            console.error('Error sending pipeline notification:', emailError);
           }
         }
         // If trying to move project to early stages, ignore

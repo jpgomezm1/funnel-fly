@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Lead, LeadStage } from '@/types/database';
+import { Lead, LeadStage, ProjectStage } from '@/types/database';
 
 interface NotificationPayload {
   type: 'new_lead' | 'stage_change' | 'lead_won' | 'lead_lost';
@@ -85,9 +85,52 @@ export const useEmailNotifications = () => {
     });
   };
 
+  const notifyProjectStageChange = async (
+    project: { id: string; name: string; client?: { company_name: string; contact_name?: string }; deal?: { mrr_usd: number } | null },
+    fromStage: ProjectStage,
+    toStage: ProjectStage
+  ) => {
+    try {
+      let notificationType: 'project_stage_change' | 'project_won' | 'project_lost' = 'project_stage_change';
+
+      if (toStage === 'CERRADO_GANADO') {
+        notificationType = 'project_won';
+      } else if (toStage === 'CERRADO_PERDIDO') {
+        notificationType = 'project_lost';
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-pipeline-notification', {
+        body: {
+          type: notificationType,
+          projectData: {
+            id: project.id,
+            name: project.name,
+            company_name: project.client?.company_name || 'Sin empresa',
+            contact_name: project.client?.contact_name || undefined,
+            from_stage: fromStage,
+            to_stage: toStage,
+            mrr_usd: project.deal?.mrr_usd || undefined,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Error sending pipeline notification:', error);
+        return { success: false, error };
+      }
+
+      console.log('Pipeline notification sent successfully:', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error in notifyProjectStageChange:', error);
+      return { success: false, error };
+    }
+  };
+
   return {
     sendNotification,
     notifyNewLead,
     notifyStageChange,
+    notifyProjectStageChange,
   };
 };

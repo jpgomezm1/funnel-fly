@@ -79,14 +79,12 @@ const WEEKLY_GOAL = 10;
 const COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1'];
 
 const TEAM_COLORS: Record<CallTeamMember, string> = {
-  pamela: '#EC4899',
   juan_pablo: '#3B82F6',
   sara: '#8B5CF6',
   agustin: '#10B981',
 };
 
 const TEAM_COLORS_LIGHT: Record<CallTeamMember, string> = {
-  pamela: 'bg-pink-100 text-pink-700 border-pink-200',
   juan_pablo: 'bg-blue-100 text-blue-700 border-blue-200',
   sara: 'bg-purple-100 text-purple-700 border-purple-200',
   agustin: 'bg-emerald-100 text-emerald-700 border-emerald-200',

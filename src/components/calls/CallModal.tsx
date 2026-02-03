@@ -67,7 +67,7 @@ const initialFormState = {
   contact_email: '',
   contact_linkedin: '',
   company_linkedin: '',
-  team_member: 'pamela' as CallTeamMember,
+  team_member: 'juan_pablo' as CallTeamMember,
   source: '' as CallSource | '',
   call_result: '' as CallResult | '',
   notes: '',

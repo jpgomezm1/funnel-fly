@@ -56,14 +56,12 @@ interface CallsCalendarProps {
 
 // Team member colors
 const TEAM_COLORS: Record<CallTeamMember, string> = {
-  pamela: 'bg-pink-500',
   juan_pablo: 'bg-blue-500',
   sara: 'bg-purple-500',
   agustin: 'bg-emerald-500',
 };
 
 const TEAM_COLORS_LIGHT: Record<CallTeamMember, string> = {
-  pamela: 'bg-pink-100 border-pink-300 text-pink-800',
   juan_pablo: 'bg-blue-100 border-blue-300 text-blue-800',
   sara: 'bg-purple-100 border-purple-300 text-purple-800',
   agustin: 'bg-emerald-100 border-emerald-300 text-emerald-800',

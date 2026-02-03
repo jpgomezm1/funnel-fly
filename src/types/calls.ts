@@ -1,4 +1,4 @@
-export type CallTeamMember = 'pamela' | 'juan_pablo' | 'sara' | 'agustin';
+export type CallTeamMember = 'juan_pablo' | 'sara' | 'agustin';
 
 export type CallResult =
   | 'lead_no_califica'
@@ -103,7 +103,6 @@ export interface Call {
 }
 
 export const TEAM_MEMBER_LABELS: Record<CallTeamMember, string> = {
-  pamela: 'Pamela Puello',
   juan_pablo: 'Juan Pablo Gomez',
   sara: 'Sara Garces',
   agustin: 'Agustin Hoyos',

@@ -32,7 +32,6 @@ const corsHeaders = {
 // ========== LABELS ==========
 
 const TEAM_MEMBER_LABELS: Record<string, string> = {
-  pamela: 'Pamela Puello',
   juan_pablo: 'Juan Pablo Gomez',
   sara: 'Sara Garces',
   agustin: 'Agustin Hoyos',
