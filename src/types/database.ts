@@ -341,6 +341,8 @@ export interface Project {
   // Churn info
   churned_at?: string;
   churn_reason?: string;
+  // Phase 0 document link
+  phase0_link?: string;
   // Booked values (expected when in PROPUESTA)
   booked_currency?: DealCurrency;
   booked_mrr_original?: number;

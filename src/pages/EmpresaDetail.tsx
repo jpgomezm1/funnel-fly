@@ -41,6 +41,8 @@ import {
   Play,
   Pause,
   MessageSquare,
+  Rocket,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLeads, useLeadContacts } from '@/hooks/useLeads';
@@ -84,6 +86,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 // Hook para obtener el cliente asociado a este lead con sus proyectos
@@ -207,6 +219,9 @@ export default function EmpresaDetail() {
   const [deletingContact, setDeletingContact] = useState<LeadContact | null>(null);
   const [savingCompany, setSavingCompany] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [phase0LinkModal, setPhase0LinkModal] = useState<{ projectId: string; currentLink?: string } | null>(null);
+  const [phase0LinkValue, setPhase0LinkValue] = useState('');
+  const [savingPhase0Link, setSavingPhase0Link] = useState(false);
 
   const lead = leads.find(l => l.id === id);
 
@@ -352,6 +367,32 @@ export default function EmpresaDetail() {
     if (!id) return;
     await deleteLead(id);
     navigate('/empresas');
+  };
+
+  const handleOpenPhase0LinkModal = (projectId: string, currentLink?: string) => {
+    setPhase0LinkValue(currentLink || '');
+    setPhase0LinkModal({ projectId, currentLink });
+  };
+
+  const handleSavePhase0Link = async () => {
+    if (!phase0LinkModal) return;
+
+    setSavingPhase0Link(true);
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ phase0_link: phase0LinkValue.trim() || null })
+        .eq('id', phase0LinkModal.projectId);
+
+      if (error) throw error;
+
+      refetchClient();
+      setPhase0LinkModal(null);
+    } catch (error) {
+      console.error('Error saving phase0 link:', error);
+    } finally {
+      setSavingPhase0Link(false);
+    }
   };
 
   if (!lead) {
@@ -1032,10 +1073,12 @@ export default function EmpresaDetail() {
                     return (
                       <div
                         key={project.id}
-                        className="p-4 border rounded-lg hover:border-primary/30 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/empresas/${id}/proyectos/${project.id}`)}
+                        className="p-4 border rounded-lg hover:border-primary/30 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-3">
+                        <div
+                          className="flex items-start justify-between mb-3 cursor-pointer"
+                          onClick={() => navigate(`/empresas/${id}/proyectos/${project.id}`)}
+                        >
                           <div>
                             <h3 className="font-medium flex items-center gap-2">
                               {project.name}
@@ -1051,6 +1094,54 @@ export default function EmpresaDetail() {
                           >
                             {PROJECT_STAGE_LABELS[project.stage]}
                           </Badge>
+                        </div>
+
+                        {/* Phase 0 Link Section */}
+                        <div className="pt-3 border-t mb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Rocket className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm font-medium">Fase 0</span>
+                            </div>
+                            {project.phase0_link ? (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={project.phase0_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <LinkIcon className="h-3 w-3" />
+                                  Ver documento
+                                </a>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenPhase0LinkModal(project.id, project.phase0_link);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenPhase0LinkModal(project.id);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Agregar link
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         {project.deal && (
@@ -1327,6 +1418,48 @@ export default function EmpresaDetail() {
         projectCount={clientWithProjects?.projects?.length || 0}
         onConfirm={handleDeleteCompany}
       />
+
+      {/* Phase 0 Link Modal */}
+      <Dialog open={!!phase0LinkModal} onOpenChange={() => setPhase0LinkModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5 text-blue-500" />
+              {phase0LinkModal?.currentLink ? 'Editar Link de Fase 0' : 'Agregar Link de Fase 0'}
+            </DialogTitle>
+            <DialogDescription>
+              Ingresa el link al documento interno de Fase 0 para este proyecto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="phase0_link">URL del documento</Label>
+              <Input
+                id="phase0_link"
+                type="url"
+                placeholder="https://fasecero-ejemplo.netlify.app/"
+                value={phase0LinkValue}
+                onChange={(e) => setPhase0LinkValue(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPhase0LinkModal(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSavePhase0Link} disabled={savingPhase0Link}>
+              {savingPhase0Link ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
