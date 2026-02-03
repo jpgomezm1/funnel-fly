@@ -1099,3 +1099,95 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export function getExpenseClassification(category: ExpenseCategory): ExpenseClassification {
   return FIXED_EXPENSE_CATEGORIES.includes(category) ? 'FIXED' : 'VARIABLE';
 }
+
+// ==========================================
+// PHASE 0 MODULE TYPES (Pre-deals)
+// ==========================================
+
+export type Phase0ProjectStatus = 'active' | 'on_hold' | 'converted' | 'cancelled';
+export type Phase0TaskStatus = 'pending' | 'in_progress' | 'completed';
+export type Phase0TaskPriority = 'low' | 'medium' | 'high';
+export type Phase0DocumentType = 'link' | 'file';
+
+export interface Phase0Project {
+  id: string;
+  client_name: string;
+  project_name: string;
+  description?: string;
+  status: Phase0ProjectStatus;
+  notes?: string;
+  phase0_link?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Phase0Document {
+  id: string;
+  phase0_project_id: string;
+  name: string;
+  document_type: Phase0DocumentType;
+  url?: string;
+  file_path?: string;
+  file_size?: number;
+  mime_type?: string;
+  notes?: string;
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Phase0Task {
+  id: string;
+  phase0_project_id: string;
+  title: string;
+  description?: string;
+  status: Phase0TaskStatus;
+  priority: Phase0TaskPriority;
+  assigned_to?: string;
+  due_date?: string;
+  completed_at?: string;
+  completed_by?: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PHASE0_PROJECT_STATUS_LABELS: Record<Phase0ProjectStatus, string> = {
+  'active': 'Activo',
+  'on_hold': 'En Pausa',
+  'converted': 'Convertido',
+  'cancelled': 'Cancelado'
+};
+
+export const PHASE0_PROJECT_STATUS_COLORS: Record<Phase0ProjectStatus, string> = {
+  'active': 'bg-emerald-100 text-emerald-700',
+  'on_hold': 'bg-amber-100 text-amber-700',
+  'converted': 'bg-blue-100 text-blue-700',
+  'cancelled': 'bg-red-100 text-red-700'
+};
+
+export const PHASE0_TASK_STATUS_LABELS: Record<Phase0TaskStatus, string> = {
+  'pending': 'Pendiente',
+  'in_progress': 'En Progreso',
+  'completed': 'Completado'
+};
+
+export const PHASE0_TASK_STATUS_COLORS: Record<Phase0TaskStatus, string> = {
+  'pending': 'bg-slate-100 text-slate-700',
+  'in_progress': 'bg-amber-100 text-amber-700',
+  'completed': 'bg-emerald-100 text-emerald-700'
+};
+
+export const PHASE0_TASK_PRIORITY_LABELS: Record<Phase0TaskPriority, string> = {
+  'low': 'Baja',
+  'medium': 'Media',
+  'high': 'Alta'
+};
+
+export const PHASE0_TASK_PRIORITY_COLORS: Record<Phase0TaskPriority, string> = {
+  'low': 'bg-slate-100 text-slate-600',
+  'medium': 'bg-blue-100 text-blue-600',
+  'high': 'bg-red-100 text-red-600'
+};
+
+export const PHASE0_TASK_STATUS_ORDER: Phase0TaskStatus[] = ['pending', 'in_progress', 'completed'];

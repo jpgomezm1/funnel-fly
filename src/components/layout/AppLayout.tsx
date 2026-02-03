@@ -83,6 +83,7 @@ const modules: NavModule[] = [
     icon: Code2,
     color: 'text-blue-500',
     items: [
+      { name: 'Fase 0', href: '/tech/phase0', icon: Rocket },
       { name: 'Proyectos', href: '/tech/projects', icon: FolderKanban },
       { name: 'Métricas', href: '/tech/metrics', icon: Timer },
     ],

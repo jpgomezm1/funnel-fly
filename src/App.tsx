@@ -25,6 +25,8 @@ import SocialMedia from "./pages/marketing/SocialMedia";
 import TechProjects from "./pages/tech/TechProjects";
 import TechProjectDetail from "./pages/tech/TechProjectDetail";
 import TechMetrics from "./pages/tech/TechMetrics";
+import TechPhase0Projects from "./pages/tech/TechPhase0Projects";
+import TechPhase0ProjectDetail from "./pages/tech/TechPhase0ProjectDetail";
 // Finance
 import FinanceDashboard from "./pages/finance/FinanceDashboard";
 import FinanceIncome from "./pages/finance/FinanceIncome";
@@ -104,6 +106,8 @@ const App = () => (
                     <Route path="/clients/:clientId/proyectos/:projectId" element={<RoleRoute module="sales"><ProjectDetail /></RoleRoute>} />
                     <Route path="/sales/calls" element={<RoleRoute module="sales"><Calls /></RoleRoute>} />
                     {/* Tech routes */}
+                    <Route path="/tech/phase0" element={<RoleRoute module="tech"><TechPhase0Projects /></RoleRoute>} />
+                    <Route path="/tech/phase0/:projectId" element={<RoleRoute module="tech"><TechPhase0ProjectDetail /></RoleRoute>} />
                     <Route path="/tech/projects" element={<RoleRoute module="tech"><TechProjects /></RoleRoute>} />
                     <Route path="/tech/projects/:projectId" element={<RoleRoute module="tech"><TechProjectDetail /></RoleRoute>} />
                     <Route path="/tech/metrics" element={<RoleRoute module="tech"><TechMetrics /></RoleRoute>} />
