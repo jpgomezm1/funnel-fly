@@ -58,7 +58,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const RoleRoute = ({ module, children }: { module: string; children: React.ReactNode }) => {
-  const { hasAccess, isLoading } = useUserRole();
+  const { hasAccess, isLoading, role } = useUserRole();
+
+  console.log('[RoleRoute] module:', module, 'isLoading:', isLoading, 'role:', role, 'hasAccess:', hasAccess(module));
 
   if (isLoading) {
     return (
@@ -69,6 +71,7 @@ const RoleRoute = ({ module, children }: { module: string; children: React.React
   }
 
   if (!hasAccess(module)) {
+    console.warn('[RoleRoute] ACCESS DENIED for module:', module, '- redirecting to /');
     return <Navigate to="/" replace />;
   }
 

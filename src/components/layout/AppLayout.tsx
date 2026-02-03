@@ -107,7 +107,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [expandedModules, setExpandedModules] = useState<string[]>(['Sales']);
   const location = useLocation();
   const navigate = useNavigate();
-  const { hasAccess, displayName } = useUserRole();
+  const { hasAccess, displayName, role } = useUserRole();
 
   const visibleModules = modules.filter((m) => hasAccess(m.moduleKey));
 
@@ -148,7 +148,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
@@ -181,6 +181,26 @@ export function AppLayout({ children }: AppLayoutProps) {
               className="h-7 w-auto"
             />
           </Link>
+
+          {displayName && (
+            <div className="px-4 py-3 border-b border-sidebar-border">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/20">
+                  <span className="text-xs font-bold text-white">
+                    {displayName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                    {displayName}
+                  </p>
+                  <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-wider">
+                    {role ?? ''}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-6 overflow-y-auto">
@@ -272,11 +292,6 @@ export function AppLayout({ children }: AppLayoutProps) {
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar sesión
             </Button>
-            {displayName && (
-              <p className="text-xs text-sidebar-foreground/60 text-center font-medium truncate">
-                {displayName}
-              </p>
-            )}
             <p className="text-xs text-sidebar-foreground/40 text-center">
               irrelevant ERP v1.0
             </p>
@@ -293,15 +308,17 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main content */}
-      <main className="flex-1 min-w-0">
-        {/* Top bar with notifications */}
-        <div className="hidden lg:flex items-center justify-end gap-2 px-8 pt-4 pb-0">
-          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex text-muted-foreground">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-          <NotificationBell />
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto relative">
+        {/* Top bar with notifications - floating over content */}
+        <div className="hidden lg:flex items-center justify-end gap-2 px-8 pt-4 pb-0 sticky top-0 z-20 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2">
+            <kbd className="hidden h-5 select-none items-center gap-1 rounded border border-zinc-600 bg-zinc-800/80 backdrop-blur-sm px-1.5 font-mono text-[10px] font-medium sm:flex text-zinc-400">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+            <NotificationBell />
+          </div>
         </div>
-        <div className="h-full p-6 lg:p-8 pt-16 lg:pt-2">
+        <div className="p-6 lg:p-8 pt-16 lg:pt-0">
           {children}
         </div>
       </main>
