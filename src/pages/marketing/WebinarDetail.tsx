@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format, differenceInDays, isPast, isFuture } from 'date-fns';
 import { es } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
 import {
   Video,
   Users,
@@ -442,6 +443,8 @@ export default function WebinarDetail() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [registrantsPage, setRegistrantsPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
 
   // Filter registrants
   const filteredRegistrants = useMemo(() => {
@@ -466,6 +469,45 @@ export default function WebinarDetail() {
       return matchesSearch && matchesAttendance && matchesCompany;
     });
   }, [registrants, searchQuery, attendanceFilter, companyFilter]);
+
+  // Pagination helpers
+  const totalRegistrantsPages = Math.ceil(filteredRegistrants.length / ITEMS_PER_PAGE);
+  const paginatedRegistrants = filteredRegistrants.slice(
+    (registrantsPage - 1) * ITEMS_PER_PAGE,
+    registrantsPage * ITEMS_PER_PAGE
+  );
+
+  const getRegistrantsPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalRegistrantsPages <= 7) {
+      for (let i = 1; i <= totalRegistrantsPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (registrantsPage > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, registrantsPage - 1); i <= Math.min(totalRegistrantsPages - 1, registrantsPage + 1); i++) {
+        pages.push(i);
+      }
+      if (registrantsPage < totalRegistrantsPages - 2) pages.push('ellipsis');
+      pages.push(totalRegistrantsPages);
+    }
+    return pages;
+  };
+
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setRegistrantsPage(1);
+  };
+
+  const handleAttendanceFilterChange = (value: 'all' | 'attended' | 'absent') => {
+    setAttendanceFilter(value);
+    setRegistrantsPage(1);
+  };
+
+  const handleCompanyFilterChange = (value: string) => {
+    setCompanyFilter(value);
+    setRegistrantsPage(1);
+  };
 
   // Analytics from CSV data
   const analytics = useWebinarAnalytics(registrants);
@@ -561,24 +603,32 @@ export default function WebinarDetail() {
     });
   };
 
-  const handleExportCSV = () => {
-    const headers = ['Nombre', 'Email', 'Empresa', 'Cargo', 'Telefono', 'Asistio'];
-    const rows = filteredRegistrants.map(r => [
-      r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-      r.email,
-      r.company || '',
-      r.role || '',
-      r.phone_number || '',
-      r.has_joined_event ? 'Si' : 'No',
-    ]);
+  const handleExportExcel = () => {
+    const data = filteredRegistrants.map(r => ({
+      'Nombre': r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+      'Email': r.email,
+      'Empresa': r.company || '',
+      'Cargo': r.role || '',
+      'Telefono': r.phone_number || '',
+      'Asistio': r.has_joined_event ? 'Si' : 'No',
+    }));
 
-    const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${webinar?.name || 'webinar'}-registrants.csv`;
-    link.click();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Registrados');
+
+    // Auto-size columns
+    const colWidths = [
+      { wch: 30 }, // Nombre
+      { wch: 35 }, // Email
+      { wch: 25 }, // Empresa
+      { wch: 20 }, // Cargo
+      { wch: 15 }, // Telefono
+      { wch: 10 }, // Asistio
+    ];
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, `${webinar?.name || 'webinar'}-registrados.xlsx`);
   };
 
   if (isLoading) {
@@ -832,9 +882,9 @@ export default function WebinarDetail() {
                   <Copy className="h-4 w-4 mr-2" />
                   Copiar emails
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleExportCSV} className="justify-start">
+                <Button variant="outline" size="sm" onClick={handleExportExcel} className="justify-start">
                   <Download className="h-4 w-4 mr-2" />
-                  Exportar CSV
+                  Exportar Excel
                 </Button>
               </div>
             </CardContent>
@@ -1070,9 +1120,9 @@ export default function WebinarDetail() {
                     <Copy className="h-4 w-4 mr-2" />
                     Copiar
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                  <Button variant="outline" size="sm" onClick={handleExportExcel}>
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    Excel
                   </Button>
                 </div>
               </div>
@@ -1085,11 +1135,11 @@ export default function WebinarDetail() {
                   <Input
                     placeholder="Buscar por nombre, email o empresa..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-9"
                   />
                 </div>
-                <Select value={attendanceFilter} onValueChange={(v) => setAttendanceFilter(v as any)}>
+                <Select value={attendanceFilter} onValueChange={(v) => handleAttendanceFilterChange(v as 'all' | 'attended' | 'absent')}>
                   <SelectTrigger className="w-[150px]">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Asistencia" />
@@ -1100,7 +1150,7 @@ export default function WebinarDetail() {
                     <SelectItem value="absent">No asistieron</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <Select value={companyFilter} onValueChange={handleCompanyFilterChange}>
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Empresa" />
                   </SelectTrigger>
@@ -1141,7 +1191,7 @@ export default function WebinarDetail() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRegistrants.slice(0, 100).map((r) => {
+                      {paginatedRegistrants.map((r) => {
                         const fullName = r.full_name ||
                           `${r.first_name || ''} ${r.last_name || ''}`.trim() ||
                           'Sin nombre';
@@ -1233,10 +1283,46 @@ export default function WebinarDetail() {
                 </div>
               )}
 
-              {filteredRegistrants.length > 100 && (
-                <p className="text-sm text-muted-foreground text-center">
-                  Mostrando 100 de {filteredRegistrants.length} registrados. Usa filtros para refinar.
-                </p>
+              {/* Pagination */}
+              {totalRegistrantsPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {((registrantsPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(registrantsPage * ITEMS_PER_PAGE, filteredRegistrants.length)} de {filteredRegistrants.length} registrados
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRegistrantsPage(p => Math.max(1, p - 1))}
+                      disabled={registrantsPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    {getRegistrantsPageNumbers().map((page, idx) =>
+                      page === 'ellipsis' ? (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                      ) : (
+                        <Button
+                          key={page}
+                          variant={registrantsPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          className="w-9"
+                          onClick={() => setRegistrantsPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRegistrantsPage(p => Math.min(totalRegistrantsPages, p + 1))}
+                      disabled={registrantsPage === totalRegistrantsPages}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

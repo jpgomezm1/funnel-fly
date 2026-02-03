@@ -1191,3 +1191,68 @@ export const PHASE0_TASK_PRIORITY_COLORS: Record<Phase0TaskPriority, string> = {
 };
 
 export const PHASE0_TASK_STATUS_ORDER: Phase0TaskStatus[] = ['pending', 'in_progress', 'completed'];
+
+// ==========================================
+// ERP FEEDBACK MODULE TYPES
+// ==========================================
+
+export type ERPFeedbackCategory = 'feature' | 'bug' | 'improvement' | 'question';
+export type ERPFeedbackPriority = 'low' | 'medium' | 'high';
+export type ERPFeedbackStatus = 'pending' | 'in_progress' | 'completed' | 'rejected';
+
+export interface ERPFeedback {
+  id: string;
+  title: string;
+  description?: string;
+  category: ERPFeedbackCategory;
+  priority: ERPFeedbackPriority;
+  status: ERPFeedbackStatus;
+  created_by: string;
+  created_by_name?: string;
+  completed_at?: string;
+  completed_by?: string;
+  rejected_reason?: string;
+  votes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const ERP_FEEDBACK_CATEGORY_LABELS: Record<ERPFeedbackCategory, string> = {
+  'feature': 'Nueva Funcionalidad',
+  'bug': 'Bug / Error',
+  'improvement': 'Mejora',
+  'question': 'Pregunta',
+};
+
+export const ERP_FEEDBACK_CATEGORY_COLORS: Record<ERPFeedbackCategory, string> = {
+  'feature': 'bg-blue-100 text-blue-700',
+  'bug': 'bg-red-100 text-red-700',
+  'improvement': 'bg-purple-100 text-purple-700',
+  'question': 'bg-amber-100 text-amber-700',
+};
+
+export const ERP_FEEDBACK_PRIORITY_LABELS: Record<ERPFeedbackPriority, string> = {
+  'low': 'Baja',
+  'medium': 'Media',
+  'high': 'Alta',
+};
+
+export const ERP_FEEDBACK_PRIORITY_COLORS: Record<ERPFeedbackPriority, string> = {
+  'low': 'bg-slate-100 text-slate-600',
+  'medium': 'bg-blue-100 text-blue-600',
+  'high': 'bg-red-100 text-red-600',
+};
+
+export const ERP_FEEDBACK_STATUS_LABELS: Record<ERPFeedbackStatus, string> = {
+  'pending': 'Pendiente',
+  'in_progress': 'En Progreso',
+  'completed': 'Completado',
+  'rejected': 'Rechazado',
+};
+
+export const ERP_FEEDBACK_STATUS_COLORS: Record<ERPFeedbackStatus, string> = {
+  'pending': 'bg-slate-100 text-slate-700',
+  'in_progress': 'bg-amber-100 text-amber-700',
+  'completed': 'bg-emerald-100 text-emerald-700',
+  'rejected': 'bg-red-100 text-red-700',
+};

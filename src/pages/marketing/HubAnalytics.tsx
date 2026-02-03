@@ -102,6 +102,7 @@ import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 // Constants
 const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; borderColor: string }> = {
@@ -162,6 +163,9 @@ export default function HubAnalytics() {
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [engagementFilter, setEngagementFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
+  const [usersPage, setUsersPage] = useState(1);
+  const [companiesPage, setCompaniesPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
 
   // State for Newsletter tab
   const [newsletterSearch, setNewsletterSearch] = useState('');
@@ -449,6 +453,69 @@ export default function HubAnalytics() {
       description: `${emails.length} emails copiados al portapapeles`,
     });
   };
+
+  // Export users to Excel
+  const handleExportUsersToExcel = () => {
+    const data = filteredUsers.map(user => {
+      const totalUses = (user.stack_generator_uses || 0) +
+                        (user.tool_comparator_uses || 0) +
+                        (user.impact_analyzer_uses || 0) +
+                        (user.ai_assistant_uses || 0);
+      const engagement = getEngagementLevel(user);
+      return {
+        'Nombre': user.full_name || '',
+        'Email': user.email || '',
+        'Telefono': user.phone || '',
+        'Empresa': user.company || '',
+        'Cargo': user.position || '',
+        'Pais': user.country || '',
+        'Score': user.lead_score || 0,
+        'Engagement': engagement.level,
+        'Total Usos': totalUses,
+        'Stack Generator': user.stack_generator_uses || 0,
+        'Tool Comparator': user.tool_comparator_uses || 0,
+        'Impact Analyzer': user.impact_analyzer_uses || 0,
+        'AI Assistant': user.ai_assistant_uses || 0,
+        'Marketing Consent': user.marketing_consent ? 'Si' : 'No',
+        'Fecha Registro': user.created_at ? format(new Date(user.created_at), 'dd/MM/yyyy') : '',
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+    XLSX.writeFile(wb, `hub_usuarios_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast({ title: 'Excel descargado', description: `${data.length} usuarios exportados` });
+  };
+
+  // Export companies to Excel
+  const handleExportCompaniesToExcel = () => {
+    if (!hubData) return;
+    const data = hubData.topCompanies.map(company => {
+      const companyData = hubData.usersByCompany.find(c => c.company === company.company);
+      const emails = companyData?.users.map(u => u.email).join(', ') || '';
+      return {
+        'Empresa': company.company,
+        'Usuarios': company.count,
+        'Score Promedio': company.avgScore.toFixed(0),
+        'Con Telefono': company.hasPhone,
+        'Emails': emails,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
+    XLSX.writeFile(wb, `hub_empresas_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast({ title: 'Excel descargado', description: `${data.length} empresas exportadas` });
+  };
+
+  // Pagination helpers
+  const totalUsersPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
+
+  const totalCompaniesPages = hubData ? Math.ceil(hubData.topCompanies.length / ITEMS_PER_PAGE) : 0;
+  const paginatedCompanies = hubData ? hubData.topCompanies.slice((companiesPage - 1) * ITEMS_PER_PAGE, companiesPage * ITEMS_PER_PAGE) : [];
 
   return (
     <div className="space-y-6">
@@ -910,11 +977,11 @@ export default function HubAnalytics() {
                   <Input
                     placeholder="Buscar por nombre, email o empresa..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setUsersPage(1); }}
                     className="pl-9"
                   />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setUsersPage(1); }}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Estado" />
                   </SelectTrigger>
@@ -925,7 +992,7 @@ export default function HubAnalytics() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setUsersPage(1); }}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Pais" />
                   </SelectTrigger>
@@ -936,7 +1003,7 @@ export default function HubAnalytics() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setUsersPage(1); }}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Ordenar" />
                   </SelectTrigger>
@@ -954,9 +1021,13 @@ export default function HubAnalytics() {
           {/* Results & Actions */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Mostrando {Math.min(filteredUsers.length, 50)} de {filteredUsers.length} usuarios
+              Mostrando {((usersPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(usersPage * ITEMS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuarios
             </p>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportUsersToExcel}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
               <Button variant="outline" size="sm" onClick={() => handleCopyAllEmails(filteredUsers.map(u => u.email).filter(Boolean))}>
                 <Copy className="h-4 w-4 mr-2" />
                 Copiar emails ({filteredUsers.length})
@@ -982,7 +1053,7 @@ export default function HubAnalytics() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.slice(0, 50).map((user) => {
+                    {paginatedUsers.map((user) => {
                       const engagement = getEngagementLevel(user);
                       const scoreInfo = getLeadScoreInfo(user.lead_score || 0);
                       const totalUses = (user.stack_generator_uses || 0) +
@@ -1067,6 +1138,58 @@ export default function HubAnalytics() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Pagination */}
+          {totalUsersPages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Pagina {usersPage} de {totalUsersPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                  disabled={usersPage === 1}
+                >
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalUsersPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalUsersPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (usersPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (usersPage >= totalUsersPages - 2) {
+                      pageNum = totalUsersPages - 4 + i;
+                    } else {
+                      pageNum = usersPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={usersPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setUsersPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUsersPage(p => Math.min(totalUsersPages, p + 1))}
+                  disabled={usersPage === totalUsersPages}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* ==================== COMPANIES TAB ==================== */}
@@ -1117,14 +1240,27 @@ export default function HubAnalytics() {
             </Card>
           </div>
 
+          {/* Results & Actions */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {((companiesPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(companiesPage * ITEMS_PER_PAGE, hubData.topCompanies.length)} de {hubData.topCompanies.length} empresas
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportCompaniesToExcel}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+            </div>
+          </div>
+
           {/* Top Companies Table */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Top Empresas por Usuarios
+                Empresas por Usuarios
               </CardTitle>
-              <CardDescription>Empresas con mayor cantidad de usuarios registrados</CardDescription>
+              <CardDescription>Empresas ordenadas por cantidad de usuarios registrados</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -1139,17 +1275,19 @@ export default function HubAnalytics() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {hubData.topCompanies.slice(0, 20).map((company, idx) => (
+                  {paginatedCompanies.map((company, idx) => {
+                    const globalIdx = (companiesPage - 1) * ITEMS_PER_PAGE + idx;
+                    return (
                     <TableRow key={company.company}>
                       <TableCell>
                         <div className={cn(
                           "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold",
-                          idx === 0 ? "bg-amber-500 text-white" :
-                          idx === 1 ? "bg-gray-400 text-white" :
-                          idx === 2 ? "bg-amber-600 text-white" :
+                          globalIdx === 0 ? "bg-amber-500 text-white" :
+                          globalIdx === 1 ? "bg-gray-400 text-white" :
+                          globalIdx === 2 ? "bg-amber-600 text-white" :
                           "bg-muted text-muted-foreground"
                         )}>
-                          {idx < 3 ? (idx === 0 ? <Trophy className="h-3.5 w-3.5" /> : idx === 1 ? <Medal className="h-3.5 w-3.5" /> : <Award className="h-3.5 w-3.5" />) : idx + 1}
+                          {globalIdx < 3 ? (globalIdx === 0 ? <Trophy className="h-3.5 w-3.5" /> : globalIdx === 1 ? <Medal className="h-3.5 w-3.5" /> : <Award className="h-3.5 w-3.5" />) : globalIdx + 1}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1191,11 +1329,64 @@ export default function HubAnalytics() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pagination */}
+          {totalCompaniesPages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Pagina {companiesPage} de {totalCompaniesPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCompaniesPage(p => Math.max(1, p - 1))}
+                  disabled={companiesPage === 1}
+                >
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalCompaniesPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalCompaniesPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (companiesPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (companiesPage >= totalCompaniesPages - 2) {
+                      pageNum = totalCompaniesPages - 4 + i;
+                    } else {
+                      pageNum = companiesPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={companiesPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCompaniesPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCompaniesPage(p => Math.min(totalCompaniesPages, p + 1))}
+                  disabled={companiesPage === totalCompaniesPages}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Companies with Multiple Users */}
           {hubData.topCompanies.filter(c => c.count > 1).length > 0 && (

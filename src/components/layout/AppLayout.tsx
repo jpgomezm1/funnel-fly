@@ -24,14 +24,13 @@ import {
   LogOut,
   BookOpen,
   Phone,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { AIChatWidget } from '@/components/ai-assistant';
-import { NotificationBell } from '@/components/layout/NotificationBell';
-import { GlobalSearch } from '@/components/GlobalSearch';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface AppLayoutProps {
@@ -283,8 +282,21 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </nav>
 
-          {/* Footer with logout */}
-          <div className="px-3 py-4 border-t border-sidebar-border space-y-3">
+          {/* Footer with feedback and logout */}
+          <div className="px-3 py-4 border-t border-sidebar-border space-y-2">
+            <Link
+              to="/feedback"
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                location.pathname === '/feedback'
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              Feedback
+            </Link>
             <Button
               variant="ghost"
               className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
@@ -310,22 +322,10 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main content */}
       <main className="flex-1 min-w-0 h-screen overflow-y-auto relative">
-        {/* Top bar with notifications - floating over content */}
-        <div className="hidden lg:flex items-center justify-end gap-2 px-8 pt-4 pb-0 sticky top-0 z-20 pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-2">
-            <kbd className="hidden h-5 select-none items-center gap-1 rounded border border-zinc-600 bg-zinc-800/80 backdrop-blur-sm px-1.5 font-mono text-[10px] font-medium sm:flex text-zinc-400">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-            <NotificationBell />
-          </div>
-        </div>
-        <div className="p-6 lg:p-8 pt-16 lg:pt-0">
+        <div className="p-6 lg:p-8 pt-16 lg:pt-4">
           {children}
         </div>
       </main>
-
-      {/* Global Search */}
-      <GlobalSearch />
 
       {/* AI Assistant Widget */}
       <AIChatWidget />

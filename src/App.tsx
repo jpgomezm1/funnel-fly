@@ -35,6 +35,8 @@ import FinancePayroll from "./pages/finance/FinancePayroll";
 import FinanceAccounting from "./pages/finance/FinanceAccounting";
 // Sales
 import Calls from "./pages/sales/Calls";
+// Global
+import ERPFeedback from "./pages/ERPFeedback";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +124,8 @@ const App = () => (
                     <Route path="/finance/expenses" element={<RoleRoute module="finance"><FinanceExpenses /></RoleRoute>} />
                     <Route path="/finance/payroll" element={<RoleRoute module="finance"><FinancePayroll /></RoleRoute>} />
                     <Route path="/finance/accounting" element={<RoleRoute module="finance"><FinanceAccounting /></RoleRoute>} />
+                    {/* Global routes - accessible to everyone */}
+                    <Route path="/feedback" element={<ERPFeedback />} />
                     {/* Legacy routes - redirect to empresas */}
                     <Route path="/leads" element={<Empresas />} />
                     <Route path="/leads/:id" element={<EmpresaDetail />} />
