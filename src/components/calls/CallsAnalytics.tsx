@@ -79,14 +79,14 @@ const WEEKLY_GOAL = 10;
 const COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1'];
 
 const TEAM_COLORS: Record<CallTeamMember, string> = {
-  juan_pablo: '#3B82F6',
-  sara: '#8B5CF6',
-  agustin: '#10B981',
+  juan_pablo: '#3B82F6',  // Blue
+  sara: '#F97316',        // Orange - clearly distinct from blue
+  agustin: '#10B981',     // Green
 };
 
 const TEAM_COLORS_LIGHT: Record<CallTeamMember, string> = {
   juan_pablo: 'bg-blue-100 text-blue-700 border-blue-200',
-  sara: 'bg-purple-100 text-purple-700 border-purple-200',
+  sara: 'bg-orange-100 text-orange-700 border-orange-200',
   agustin: 'bg-emerald-100 text-emerald-700 border-emerald-200',
 };
 
@@ -572,7 +572,6 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
                       name={TEAM_MEMBER_LABELS[member].split(' ')[0]}
                       fill={TEAM_COLORS[member]}
                       radius={[2, 2, 0, 0]}
-                      stackId="a"
                     />
                   ))}
                 </ComposedChart>
@@ -591,6 +590,179 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Individual Evolution Line Chart */}
+          <div className="mt-8 pt-6 border-t">
+            <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-blue-500" />
+              Evolución Individual (Tendencia Semanal)
+            </h4>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyGoalsData}>
+                  <defs>
+                    {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => (
+                      <linearGradient key={member} id={`color${member}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={TEAM_COLORS[member]} stopOpacity={0.2} />
+                        <stop offset="95%" stopColor={TEAM_COLORS[member]} stopOpacity={0} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="weekLabel" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background border rounded-lg p-3 shadow-lg">
+                            <p className="font-medium text-sm mb-2">{data.fullLabel}</p>
+                            <div className="space-y-1.5">
+                              {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => {
+                                const count = data.byMember[member] || 0;
+                                const achieved = count >= WEEKLY_GOAL;
+                                return (
+                                  <div key={member} className="flex items-center justify-between gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-2.5 h-2.5 rounded-full"
+                                        style={{ backgroundColor: TEAM_COLORS[member] }}
+                                      />
+                                      <span>{TEAM_MEMBER_LABELS[member].split(' ')[0]}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <span className={cn(
+                                        "font-medium",
+                                        achieved ? "text-green-600" : ""
+                                      )}>
+                                        {count}
+                                      </span>
+                                      {achieved && <CheckCircle className="h-3 w-3 text-green-600" />}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <ReferenceLine y={WEEKLY_GOAL} stroke="#10B981" strokeDasharray="5 5" label={{ value: 'Meta', position: 'right', fontSize: 10 }} />
+                  {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => (
+                    <Area
+                      key={member}
+                      type="monotone"
+                      dataKey={`byMember.${member}`}
+                      name={TEAM_MEMBER_LABELS[member].split(' ')[0]}
+                      stroke={TEAM_COLORS[member]}
+                      strokeWidth={2}
+                      fill={`url(#color${member})`}
+                      dot={{ r: 4, fill: TEAM_COLORS[member] }}
+                      activeDot={{ r: 6 }}
+                    />
+                  ))}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Legend for line chart */}
+            <div className="flex items-center justify-center gap-4 mt-3">
+              {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => (
+                <div key={member} className="flex items-center gap-1.5">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: TEAM_COLORS[member] }}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {TEAM_MEMBER_LABELS[member].split(' ')[0]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Weekly Performance Summary Table */}
+          <div className="mt-8 pt-6 border-t">
+            <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-purple-500" />
+              Resumen Semanal Detallado
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium">Semana</th>
+                    {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => (
+                      <th key={member} className="text-center py-2 px-2 font-medium">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: TEAM_COLORS[member] }}
+                          />
+                          {TEAM_MEMBER_LABELS[member].split(' ')[0]}
+                        </div>
+                      </th>
+                    ))}
+                    <th className="text-center py-2 px-2 font-medium">Total</th>
+                    <th className="text-center py-2 px-2 font-medium">% Meta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeklyGoalsData.map((week, idx) => (
+                    <tr
+                      key={idx}
+                      className={cn(
+                        "border-b",
+                        week.isCurrentWeek && "bg-primary/5 font-medium"
+                      )}
+                    >
+                      <td className="py-2 px-2">
+                        <div>
+                          <span className={week.isCurrentWeek ? "text-primary" : ""}>
+                            {week.weekLabel}
+                          </span>
+                          <p className="text-xs text-muted-foreground">{week.fullLabel}</p>
+                        </div>
+                      </td>
+                      {(Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[]).map((member) => {
+                        const count = week.byMember[member] || 0;
+                        const achieved = count >= WEEKLY_GOAL;
+                        return (
+                          <td key={member} className="text-center py-2 px-2">
+                            <span className={cn(
+                              achieved && "text-green-600 font-semibold"
+                            )}>
+                              {count}
+                              {achieved && <CheckCircle className="inline-block h-3 w-3 ml-1" />}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className="text-center py-2 px-2 font-medium">
+                        {week.totalCalls}
+                      </td>
+                      <td className="text-center py-2 px-2">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-xs",
+                            week.teamProgress >= 100 && "bg-green-100 text-green-700",
+                            week.teamProgress >= 70 && week.teamProgress < 100 && "bg-blue-100 text-blue-700",
+                            week.teamProgress >= 40 && week.teamProgress < 70 && "bg-amber-100 text-amber-700",
+                            week.teamProgress < 40 && "bg-red-100 text-red-700"
+                          )}
+                        >
+                          {week.teamProgress}%
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>
