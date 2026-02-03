@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import Funnel from "./pages/Funnel";
 import Empresas from "./pages/Empresas";
 import EmpresaDetail from "./pages/EmpresaDetail";
@@ -30,7 +31,6 @@ import FinanceIncome from "./pages/finance/FinanceIncome";
 import FinanceExpenses from "./pages/finance/FinanceExpenses";
 import FinancePayroll from "./pages/finance/FinancePayroll";
 import FinanceAccounting from "./pages/finance/FinanceAccounting";
-import { FinanceGuard } from "./components/guards/FinanceGuard";
 // Sales
 import Calls from "./pages/sales/Calls";
 
@@ -57,6 +57,24 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const RoleRoute = ({ module, children }: { module: string; children: React.ReactNode }) => {
+  const { hasAccess, isLoading } = useUserRole();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!hasAccess(module)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -72,31 +90,31 @@ const App = () => (
                 <AppLayout>
                   <Routes>
                     <Route path="/" element={<Home />} />
-                    <Route path="/funnel" element={<Funnel />} />
-                    <Route path="/empresas" element={<Empresas />} />
-                    <Route path="/empresas/:empresaId" element={<EmpresaDetail />} />
-                    <Route path="/empresas/:empresaId/proyectos/:projectId" element={<ProjectDetail />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/clients" element={<ActiveClients />} />
-                    <Route path="/clients/:id" element={<ClientDetail />} />
-                    <Route path="/clients/:clientId/proyectos/:projectId" element={<ProjectDetail />} />
-                    {/* Tech routes */}
-                    <Route path="/tech/projects" element={<TechProjects />} />
-                    <Route path="/tech/projects/:projectId" element={<TechProjectDetail />} />
-                    <Route path="/tech/metrics" element={<TechMetrics />} />
-                    {/* Marketing routes */}
-                    <Route path="/marketing/hub" element={<HubAnalytics />} />
-                    <Route path="/marketing/webinars" element={<Webinars />} />
-                    <Route path="/marketing/webinars/:id" element={<WebinarDetail />} />
-                    <Route path="/marketing/social" element={<SocialMedia />} />
                     {/* Sales routes */}
-                    <Route path="/sales/calls" element={<Calls />} />
-                    {/* Finance routes - protected with password */}
-                    <Route path="/finance" element={<FinanceGuard><FinanceDashboard /></FinanceGuard>} />
-                    <Route path="/finance/income" element={<FinanceGuard><FinanceIncome /></FinanceGuard>} />
-                    <Route path="/finance/expenses" element={<FinanceGuard><FinanceExpenses /></FinanceGuard>} />
-                    <Route path="/finance/payroll" element={<FinanceGuard><FinancePayroll /></FinanceGuard>} />
-                    <Route path="/finance/accounting" element={<FinanceGuard><FinanceAccounting /></FinanceGuard>} />
+                    <Route path="/funnel" element={<RoleRoute module="sales"><Funnel /></RoleRoute>} />
+                    <Route path="/empresas" element={<RoleRoute module="sales"><Empresas /></RoleRoute>} />
+                    <Route path="/empresas/:empresaId" element={<RoleRoute module="sales"><EmpresaDetail /></RoleRoute>} />
+                    <Route path="/empresas/:empresaId/proyectos/:projectId" element={<RoleRoute module="sales"><ProjectDetail /></RoleRoute>} />
+                    <Route path="/analytics" element={<RoleRoute module="sales"><Analytics /></RoleRoute>} />
+                    <Route path="/clients" element={<RoleRoute module="sales"><ActiveClients /></RoleRoute>} />
+                    <Route path="/clients/:id" element={<RoleRoute module="sales"><ClientDetail /></RoleRoute>} />
+                    <Route path="/clients/:clientId/proyectos/:projectId" element={<RoleRoute module="sales"><ProjectDetail /></RoleRoute>} />
+                    <Route path="/sales/calls" element={<RoleRoute module="sales"><Calls /></RoleRoute>} />
+                    {/* Tech routes */}
+                    <Route path="/tech/projects" element={<RoleRoute module="tech"><TechProjects /></RoleRoute>} />
+                    <Route path="/tech/projects/:projectId" element={<RoleRoute module="tech"><TechProjectDetail /></RoleRoute>} />
+                    <Route path="/tech/metrics" element={<RoleRoute module="tech"><TechMetrics /></RoleRoute>} />
+                    {/* Marketing routes */}
+                    <Route path="/marketing/hub" element={<RoleRoute module="marketing"><HubAnalytics /></RoleRoute>} />
+                    <Route path="/marketing/webinars" element={<RoleRoute module="marketing"><Webinars /></RoleRoute>} />
+                    <Route path="/marketing/webinars/:id" element={<RoleRoute module="marketing"><WebinarDetail /></RoleRoute>} />
+                    <Route path="/marketing/social" element={<RoleRoute module="marketing"><SocialMedia /></RoleRoute>} />
+                    {/* Finance routes */}
+                    <Route path="/finance" element={<RoleRoute module="finance"><FinanceDashboard /></RoleRoute>} />
+                    <Route path="/finance/income" element={<RoleRoute module="finance"><FinanceIncome /></RoleRoute>} />
+                    <Route path="/finance/expenses" element={<RoleRoute module="finance"><FinanceExpenses /></RoleRoute>} />
+                    <Route path="/finance/payroll" element={<RoleRoute module="finance"><FinancePayroll /></RoleRoute>} />
+                    <Route path="/finance/accounting" element={<RoleRoute module="finance"><FinanceAccounting /></RoleRoute>} />
                     {/* Legacy routes - redirect to empresas */}
                     <Route path="/leads" element={<Empresas />} />
                     <Route path="/leads/:id" element={<EmpresaDetail />} />

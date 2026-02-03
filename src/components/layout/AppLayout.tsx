@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { AIChatWidget } from '@/components/ai-assistant';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { GlobalSearch } from '@/components/GlobalSearch';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -45,6 +46,7 @@ interface NavItem {
 
 interface NavModule {
   name: string;
+  moduleKey: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   items: NavItem[];
@@ -53,6 +55,7 @@ interface NavModule {
 const modules: NavModule[] = [
   {
     name: 'Sales',
+    moduleKey: 'sales',
     icon: TrendingUp,
     color: 'text-emerald-500',
     items: [
@@ -65,6 +68,7 @@ const modules: NavModule[] = [
   },
   {
     name: 'Marketing',
+    moduleKey: 'marketing',
     icon: Megaphone,
     color: 'text-purple-500',
     items: [
@@ -75,6 +79,7 @@ const modules: NavModule[] = [
   },
   {
     name: 'Tech',
+    moduleKey: 'tech',
     icon: Code2,
     color: 'text-blue-500',
     items: [
@@ -84,6 +89,7 @@ const modules: NavModule[] = [
   },
   {
     name: 'Finance',
+    moduleKey: 'finance',
     icon: Wallet,
     color: 'text-amber-500',
     items: [
@@ -101,10 +107,13 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [expandedModules, setExpandedModules] = useState<string[]>(['Sales']);
   const location = useLocation();
   const navigate = useNavigate();
+  const { hasAccess, displayName } = useUserRole();
+
+  const visibleModules = modules.filter((m) => hasAccess(m.moduleKey));
 
   // Auto-expand module that contains current route
   useEffect(() => {
-    modules.forEach((module) => {
+    visibleModules.forEach((module) => {
       const hasActiveItem = module.items.some(
         (item) =>
           item.href === location.pathname ||
@@ -176,7 +185,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-6 overflow-y-auto">
             <div className="space-y-6">
-              {modules.map((module) => {
+              {visibleModules.map((module) => {
                 const isExpanded = expandedModules.includes(module.name);
                 const hasActiveItem = module.items.some((item) => isItemActive(item.href));
 
@@ -263,6 +272,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               <LogOut className="h-4 w-4 mr-2" />
               Cerrar sesión
             </Button>
+            {displayName && (
+              <p className="text-xs text-sidebar-foreground/60 text-center font-medium truncate">
+                {displayName}
+              </p>
+            )}
             <p className="text-xs text-sidebar-foreground/40 text-center">
               irrelevant ERP v1.0
             </p>
