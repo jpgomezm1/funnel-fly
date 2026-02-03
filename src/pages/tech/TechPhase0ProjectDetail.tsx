@@ -161,15 +161,15 @@ export default function TechPhase0ProjectDetail() {
 
         {/* Commercial Selector */}
         <Select
-          value={project.assigned_commercial || ''}
-          onValueChange={handleCommercialChange}
+          value={project.assigned_commercial || '__none__'}
+          onValueChange={(value) => handleCommercialChange(value === '__none__' ? '' : value)}
         >
           <SelectTrigger className="w-[160px]">
             <User className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Comercial" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">
+            <SelectItem value="__none__">
               <span className="text-muted-foreground">Sin asignar</span>
             </SelectItem>
             {salesMembers.map((member) => (

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -17,10 +18,9 @@ interface UserRole {
 export function useUserRole() {
   const { user, loading: authLoading } = useAuth();
 
-  const { data, isLoading: queryLoading, error: queryError } = useQuery({
+  const { data, isLoading: queryLoading } = useQuery({
     queryKey: ['user-role', user?.id],
     queryFn: async () => {
-      console.log('[useUserRole] Fetching role for user:', user!.id, user!.email);
       // Cast to 'any' to bypass generated types that don't include user_roles
       const { data, error } = await (supabase as any)
         .from('user_roles')
@@ -28,7 +28,6 @@ export function useUserRole() {
         .eq('user_id', user!.id)
         .single();
 
-      console.log('[useUserRole] Supabase response - data:', data, 'error:', error);
       if (error) throw error;
       return data as UserRole;
     },
@@ -43,14 +42,15 @@ export function useUserRole() {
   const role = data?.role ?? null;
   const displayName = data?.display_name ?? null;
 
-  console.log('[useUserRole] State - authLoading:', authLoading, 'queryLoading:', queryLoading, 'isLoading:', isLoading, 'role:', role, 'user?.id:', user?.id, 'queryError:', queryError);
-
-  const hasAccess = (module: string): boolean => {
+  const hasAccess = useCallback((module: string): boolean => {
     if (!role) return false;
-    const allowed = ROLE_MODULES[role]?.includes(module) ?? false;
-    console.log('[useUserRole] hasAccess("' + module + '") → role:', role, 'allowed:', allowed);
-    return allowed;
-  };
+    return ROLE_MODULES[role]?.includes(module) ?? false;
+  }, [role]);
 
-  return { role, displayName, isLoading, hasAccess };
+  return useMemo(() => ({
+    role,
+    displayName,
+    isLoading,
+    hasAccess,
+  }), [role, displayName, isLoading, hasAccess]);
 }
