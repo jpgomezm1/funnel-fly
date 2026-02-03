@@ -72,6 +72,7 @@ export function usePhase0Projects() {
       description?: string;
       notes?: string;
       phase0_link?: string;
+      assigned_commercial?: string;
     }) => {
       const { data, error } = await supabase
         .from('phase0_projects')

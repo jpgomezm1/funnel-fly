@@ -1119,6 +1119,7 @@ export interface Phase0Project {
   status: Phase0ProjectStatus;
   notes?: string;
   phase0_link?: string;
+  assigned_commercial?: string;
   created_at: string;
   updated_at: string;
 }

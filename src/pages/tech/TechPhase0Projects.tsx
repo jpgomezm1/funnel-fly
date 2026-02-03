@@ -45,10 +45,12 @@ import {
   Loader2,
   Sparkles,
   Link as LinkIcon,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePhase0Projects } from '@/hooks/usePhase0Projects';
 import { useAnalyzePhase0Link } from '@/hooks/useAnalyzePhase0Link';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Phase0ProjectStatus,
@@ -77,6 +79,7 @@ export default function TechPhase0Projects() {
   } = usePhase0Projects();
 
   const { analyzeLink, isAnalyzing } = useAnalyzePhase0Link();
+  const { salesMembers, getMemberName } = useTeamMembers();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<Phase0ProjectStatus | 'ALL'>('ALL');
@@ -87,6 +90,7 @@ export default function TechPhase0Projects() {
     project_name: '',
     description: '',
     notes: '',
+    assigned_commercial: '',
   });
 
   const resetForm = () => {
@@ -95,6 +99,7 @@ export default function TechPhase0Projects() {
       project_name: '',
       description: '',
       notes: '',
+      assigned_commercial: '',
     });
     setPhase0Link('');
   };
@@ -148,6 +153,7 @@ export default function TechPhase0Projects() {
         description: formData.description.trim() || undefined,
         notes: formData.notes.trim() || undefined,
         phase0_link: phase0Link.trim() || undefined,
+        assigned_commercial: formData.assigned_commercial || undefined,
       });
 
       // If we have a link, save it as the first document
@@ -351,6 +357,12 @@ export default function TechPhase0Projects() {
                           <Building2 className="h-3.5 w-3.5" />
                           <span className="truncate">{project.client_name}</span>
                         </div>
+                        {project.assigned_commercial && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                            <User className="h-3 w-3" />
+                            <span>{getMemberName(project.assigned_commercial)}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Badge className={cn("text-xs", PHASE0_PROJECT_STATUS_COLORS[project.status])}>
@@ -439,15 +451,15 @@ export default function TechPhase0Projects() {
         setCreateModalOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Nuevo Proyecto Fase 0</DialogTitle>
             <DialogDescription>
               Crea un nuevo proyecto en fase de estructuración
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4 pr-2">
             {/* Link Fase 0 with AI Analyze */}
             <div className="space-y-2">
               <Label htmlFor="phase0_link" className="flex items-center gap-2">
@@ -496,14 +508,41 @@ export default function TechPhase0Projects() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="client_name">Nombre del Cliente *</Label>
-              <Input
-                id="client_name"
-                value={formData.client_name}
-                onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                placeholder="Ej: Empresa ABC"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="client_name">Nombre del Cliente *</Label>
+                <Input
+                  id="client_name"
+                  value={formData.client_name}
+                  onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                  placeholder="Ej: Empresa ABC"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Comercial Encargado</Label>
+                <Select
+                  value={formData.assigned_commercial}
+                  onValueChange={(v) => setFormData({ ...formData, assigned_commercial: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar comercial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {salesMembers.map((member) => (
+                      <SelectItem key={member.slug} value={member.slug}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: member.color_hex }}
+                          />
+                          {member.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -539,7 +578,7 @@ export default function TechPhase0Projects() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={() => setCreateModalOpen(false)}>
               Cancelar
             </Button>

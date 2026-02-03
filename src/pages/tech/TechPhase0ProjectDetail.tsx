@@ -23,9 +23,11 @@ import {
   XCircle,
   Calendar,
   Loader2,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePhase0Project, usePhase0Projects } from '@/hooks/usePhase0Projects';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { usePhase0Documents } from '@/hooks/usePhase0Documents';
 import { usePhase0Tasks } from '@/hooks/usePhase0Tasks';
 import {
@@ -49,10 +51,11 @@ const STATUS_ICONS: Record<Phase0ProjectStatus, React.ElementType> = {
 
 export default function TechPhase0ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { project, isLoading } = usePhase0Project(projectId);
-  const { updateStatus } = usePhase0Projects();
+  const { project, isLoading, refetch } = usePhase0Project(projectId);
+  const { updateStatus, updateProject } = usePhase0Projects();
   const { documents } = usePhase0Documents({ projectId });
   const { tasks } = usePhase0Tasks(projectId);
+  const { salesMembers, getMemberName, getMemberColorHex } = useTeamMembers();
   const [activeTab, setActiveTab] = useState('documents');
 
   const handleStatusChange = async (status: Phase0ProjectStatus) => {
@@ -64,6 +67,22 @@ export default function TechPhase0ProjectDetail() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast({ title: 'Error', description: 'No se pudo actualizar el estado', variant: 'destructive' });
+    }
+  };
+
+  const handleCommercialChange = async (commercial: string) => {
+    if (!projectId) return;
+
+    try {
+      await updateProject({
+        projectId,
+        updates: { assigned_commercial: commercial || undefined }
+      });
+      refetch();
+      toast({ title: 'Comercial actualizado', description: 'El comercial encargado ha sido actualizado' });
+    } catch (error) {
+      console.error('Error updating commercial:', error);
+      toast({ title: 'Error', description: 'No se pudo actualizar el comercial', variant: 'destructive' });
     }
   };
 
@@ -112,7 +131,7 @@ export default function TechPhase0ProjectDetail() {
               {PHASE0_PROJECT_STATUS_LABELS[project.status]}
             </Badge>
           </div>
-          <div className="flex items-center gap-4 text-muted-foreground mt-1">
+          <div className="flex items-center gap-4 text-muted-foreground mt-1 flex-wrap">
             <div className="flex items-center gap-1">
               <Building2 className="h-4 w-4" />
               <span>{project.client_name}</span>
@@ -127,8 +146,45 @@ export default function TechPhase0ProjectDetail() {
                 })}
               </span>
             </div>
+            {project.assigned_commercial && (
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: getMemberColorHex(project.assigned_commercial) }}
+                />
+                <User className="h-4 w-4" />
+                <span>{getMemberName(project.assigned_commercial)}</span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Commercial Selector */}
+        <Select
+          value={project.assigned_commercial || ''}
+          onValueChange={handleCommercialChange}
+        >
+          <SelectTrigger className="w-[160px]">
+            <User className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Comercial" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">
+              <span className="text-muted-foreground">Sin asignar</span>
+            </SelectItem>
+            {salesMembers.map((member) => (
+              <SelectItem key={member.slug} value={member.slug}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: member.color_hex }}
+                  />
+                  {member.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Status Selector */}
         <Select value={project.status} onValueChange={(v) => handleStatusChange(v as Phase0ProjectStatus)}>
