@@ -176,18 +176,18 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
   // Weekly goals tracking - current week and last 8 weeks
   const weeklyGoalsData = useMemo(() => {
     const now = new Date();
-    const weeks = eachWeekOfInterval(
-      {
-        start: subWeeks(now, 7),
-        end: now,
-      },
-      { weekStartsOn: 1 }
-    );
-
     const teamMembers = Object.keys(TEAM_MEMBER_LABELS) as CallTeamMember[];
 
-    return weeks.map((weekStart) => {
-      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+    // Generate 8 weeks manually to ensure we get all of them
+    const weeks: Array<{ start: Date; end: Date }> = [];
+    for (let i = 7; i >= 0; i--) {
+      const weekDate = subWeeks(now, i);
+      const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
+      weeks.push({ start: weekStart, end: weekEnd });
+    }
+
+    return weeks.map(({ start: weekStart, end: weekEnd }) => {
       const isCurrentWeek = isSameWeek(weekStart, now, { weekStartsOn: 1 });
       const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
 
@@ -572,6 +572,7 @@ export function CallsAnalytics({ calls, title = 'Analytics de Llamadas' }: Calls
                       name={TEAM_MEMBER_LABELS[member].split(' ')[0]}
                       fill={TEAM_COLORS[member]}
                       radius={[2, 2, 0, 0]}
+                      stackId="a"
                     />
                   ))}
                 </ComposedChart>
