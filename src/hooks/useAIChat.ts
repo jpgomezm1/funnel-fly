@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from './useUserRole';
 
 export interface Message {
   id: string;
@@ -16,9 +17,11 @@ interface UseAIChatReturn {
   sessionId: string | null;
   sendMessage: (message: string) => Promise<void>;
   clearChat: () => void;
+  userName: string | null;
 }
 
 export function useAIChat(): UseAIChatReturn {
+  const { displayName, role: userRole } = useUserRole();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +74,8 @@ export function useAIChat(): UseAIChatReturn {
           body: JSON.stringify({
             message,
             sessionId,
+            userName: displayName,
+            userRole,
           }),
           signal: abortControllerRef.current.signal,
         }
@@ -147,7 +152,7 @@ export function useAIChat(): UseAIChatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, sessionId]);
+  }, [isLoading, sessionId, displayName, userRole]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -162,5 +167,6 @@ export function useAIChat(): UseAIChatReturn {
     sessionId,
     sendMessage,
     clearChat,
+    userName: displayName,
   };
 }

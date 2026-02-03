@@ -9,7 +9,7 @@ const SHELDON_IMAGE = 'https://i.redd.it/6ht9iub3umve1.jpeg';
 
 export function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, isLoading, error, sendMessage, clearChat } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearChat, userName } = useAIChat();
 
   return (
     <>
@@ -22,6 +22,7 @@ export function AIChatWidget() {
         error={error}
         onSendMessage={sendMessage}
         onClearChat={clearChat}
+        userName={userName}
       />
 
       {/* Floating Button - Sheldon Cooper */}

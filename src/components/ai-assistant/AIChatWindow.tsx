@@ -16,6 +16,7 @@ interface AIChatWindowProps {
   error: string | null;
   onSendMessage: (message: string) => void;
   onClearChat: () => void;
+  userName?: string | null;
 }
 
 export function AIChatWindow({
@@ -26,7 +27,9 @@ export function AIChatWindow({
   error,
   onSendMessage,
   onClearChat,
+  userName,
 }: AIChatWindowProps) {
+  const firstName = userName?.split(' ')[0] || 'usuario';
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll al último mensaje
@@ -104,7 +107,7 @@ export function AIChatWindow({
 
             <div className="bg-zinc-800/50 rounded-xl p-4 mb-6 max-w-sm border border-zinc-700/50">
               <p className="text-sm text-zinc-300 italic">
-                "Knock knock knock, usuario. Knock knock knock, usuario. Knock knock knock, usuario."
+                "Knock knock knock, {firstName}. Knock knock knock, {firstName}. Knock knock knock, {firstName}."
               </p>
               <p className="text-xs text-zinc-500 mt-2">
                 Soy tu asistente con acceso completo al ERP. Puedo analizar datos, identificar riesgos,

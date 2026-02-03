@@ -24,8 +24,19 @@ function sanitizeString(str: string | null | undefined): string {
     .replace(/[\x00-\x1F\x7F]/g, ' '); // Replace control characters with space
 }
 
-// System prompt para Sheldon Cooper
-const SYSTEM_PROMPT = `Eres el Dr. Sheldon Cooper, físico teórico con un IQ de 187, ahora trabajando como AI Assistant ejecutivo para Irrelevant, una empresa de tecnología enfocada en soluciones de IA y WhatsApp.
+// System prompt para Sheldon Cooper - se construye dinámicamente con el nombre del usuario
+function buildSystemPrompt(userName?: string, userRole?: string): string {
+  const name = userName || 'usuario';
+  const firstName = name.split(' ')[0];
+  const role = userRole || 'desconocido';
+
+  return `Eres el Dr. Sheldon Cooper, físico teórico con un IQ de 187, ahora trabajando como AI Assistant ejecutivo para Irrelevant, una empresa de tecnología enfocada en soluciones de IA y WhatsApp.
+
+USUARIO ACTUAL:
+- Nombre: ${name}
+- Nombre corto: ${firstName}
+- Rol en el sistema: ${role}
+- SIEMPRE dirígete al usuario por su nombre (${firstName}). Usa su nombre en tus respuestas de forma natural, como lo haría Sheldon con sus amigos.
 
 PERSONALIDAD DE SHELDON:
 - Eres extremadamente inteligente y no tienes problema en hacerlo notar
@@ -45,14 +56,18 @@ FRASES TÍPICAS QUE PUEDES USAR:
 - "Eso es fascinante... y por fascinante quiero decir obvio para cualquiera con un IQ superior a temperatura ambiente"
 - "Como diría mi madre: 'Sheldon, sé amable'. Así que seré amable mientras te explico por qué estás equivocado"
 - "En un universo infinito, la probabilidad de que no entiendas esto es... bueno, bastante alta aparentemente"
-- "Knock knock knock, [nombre]. Knock knock knock, [nombre]. Knock knock knock, [nombre]."
+- "Knock knock knock, ${firstName}. Knock knock knock, ${firstName}. Knock knock knock, ${firstName}."
 - "Esto viola claramente la segunda ley de la termodinámica del CRM"
 
 CAPACIDADES:
-1. CONSULTAS: Acceso completo a leads, clientes, proyectos, finanzas, marketing
+1. CONSULTAS: Acceso completo a leads, clientes, proyectos, finanzas, marketing, calls, propuestas, tareas, equipo
 2. ACCIONES: Puedes ejecutar acciones cuando el usuario lo solicite explícitamente
 3. ANÁLISIS: Identificar patrones, riesgos y oportunidades
 4. PREDICCIONES: Estimar resultados basados en datos históricos
+5. CALLS: Puedes ver y analizar las calls programadas, resultados, y métricas semanales
+6. PROPUESTAS: Puedes analizar propuestas activas, su estado y montos
+7. EQUIPO: Conoces a los miembros del equipo y sus roles
+8. COMPARACIONES: Puedes comparar períodos, canales, rendimiento de equipo
 
 ACCIONES DISPONIBLES (solo ejecutar si el usuario lo pide explícitamente):
 - Crear nota/actividad en un lead
@@ -67,6 +82,9 @@ ANÁLISIS PREDICTIVO QUE PUEDES HACER:
 - Proyección de MRR basada en pipeline
 - Eficiencia de canales de adquisición
 - Facturas vencidas o por vencer
+- Rendimiento de calls por team member
+- Propuestas que necesitan seguimiento
+- Tareas vencidas o bloqueadas
 
 FORMATO DE RESPUESTAS:
 - Usa markdown para estructurar cuando sea apropiado
@@ -74,11 +92,13 @@ FORMATO DE RESPUESTAS:
 - Incluye tu personalidad en cada respuesta
 - Responde en español pero puedes incluir términos en inglés como Sheldon haría
 - Si vas a ejecutar una acción, confirma primero qué vas a hacer
+- Sé conciso pero completo. No repitas datos innecesariamente.
 
 IMPORTANTE:
 - Cuando el usuario pida una acción, usa el formato especial [ACTION: tipo_accion | parametros] al final de tu respuesta
 - El sistema procesará estas acciones automáticamente
 - Siempre confirma la acción antes de ejecutarla`;
+}
 
 // Función para análisis predictivo
 async function getPredictiveAnalysis(): Promise<string> {
@@ -225,6 +245,15 @@ async function getBaseContext(): Promise<string> {
   const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
   const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
+  // Get week boundaries for calls
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay() + 1);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
   const [
     leadsResult,
     clientsResult,
@@ -232,7 +261,9 @@ async function getBaseContext(): Promise<string> {
     dealsResult,
     transactionsResult,
     lastMonthTransactions,
-    activitiesResult
+    activitiesResult,
+    callsThisWeek,
+    activeProposals
   ] = await Promise.all([
     supabase.from('leads').select('id, stage, company_name, owner_id, last_activity_at, channel, created_at'),
     supabase.from('clients').select('id, company_name'),
@@ -248,7 +279,14 @@ async function getBaseContext(): Promise<string> {
     supabase.from('lead_activities')
       .select('id, lead_id, type, description, created_at')
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(20),
+    supabase.from('calls')
+      .select('id, team_member, call_result')
+      .gte('scheduled_at', weekStart.toISOString())
+      .lte('scheduled_at', weekEnd.toISOString()),
+    supabase.from('proposals')
+      .select('id, status')
+      .in('status', ['DRAFT', 'SENT']),
   ]);
 
   const leads = leadsResult.data || [];
@@ -258,6 +296,8 @@ async function getBaseContext(): Promise<string> {
   const transactions = transactionsResult.data || [];
   const lastMonthTx = lastMonthTransactions.data || [];
   const activities = activitiesResult.data || [];
+  const weekCalls = callsThisWeek.data || [];
+  const pendingProposals = activeProposals.data || [];
 
   // Calcular métricas
   const leadsByStage = leads.reduce((acc: any, lead) => {
@@ -320,6 +360,8 @@ FECHA ACTUAL: ${today}
 👥 CLIENTES ACTIVOS: ${clients.length}
 📊 LEADS ACTIVOS: ${leads.filter(l => !['CERRADO_GANADO', 'CERRADO_PERDIDO'].includes(l.stage)).length}
 🆕 NUEVOS LEADS (7 días): ${newLeadsThisWeek}
+📞 CALLS ESTA SEMANA: ${weekCalls.length} (completadas: ${weekCalls.filter((c: any) => c.call_result).length})
+📄 PROPUESTAS ACTIVAS: ${pendingProposals.length} (${pendingProposals.filter((p: any) => p.status === 'SENT').length} enviadas, ${pendingProposals.filter((p: any) => p.status === 'DRAFT').length} en draft)
 
 ═══════════════════════════════════════════════════════
                   PIPELINE DE VENTAS
@@ -567,6 +609,139 @@ async function getDynamicContext(message: string): Promise<string> {
     }
   }
 
+  // Si pregunta sobre calls, reuniones, llamadas
+  if (lowerMessage.includes('call') || lowerMessage.includes('llamada') || lowerMessage.includes('reunión') || lowerMessage.includes('reunion') || lowerMessage.includes('reu')) {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const [upcomingCalls, weekCalls] = await Promise.all([
+      supabase
+        .from('calls')
+        .select('id, scheduled_at, company_name, contact_name, team_member, source, call_result, notes, duration_minutes')
+        .gte('scheduled_at', now.toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(10),
+      supabase
+        .from('calls')
+        .select('id, scheduled_at, company_name, contact_name, team_member, source, call_result, key_notes, duration_minutes')
+        .gte('scheduled_at', weekStart.toISOString())
+        .lte('scheduled_at', weekEnd.toISOString())
+        .order('scheduled_at', { ascending: true }),
+    ]);
+
+    if (upcomingCalls.data && upcomingCalls.data.length > 0) {
+      context += `\n\n══════ PRÓXIMAS CALLS ══════\n`;
+      upcomingCalls.data.forEach((call: any) => {
+        const date = new Date(call.scheduled_at);
+        context += `📞 ${date.toLocaleDateString('es-CO')} ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} - ${call.company_name || 'Sin empresa'}
+   - Contacto: ${call.contact_name || 'N/A'} | Responsable: ${call.team_member}
+   - Fuente: ${call.source || 'N/A'}
+   ${call.notes ? `- Notas: ${call.notes.substring(0, 80)}...` : ''}
+`;
+      });
+    }
+
+    if (weekCalls.data && weekCalls.data.length > 0) {
+      const completed = weekCalls.data.filter((c: any) => c.call_result);
+      const byMember: any = {};
+      weekCalls.data.forEach((c: any) => {
+        byMember[c.team_member] = (byMember[c.team_member] || 0) + 1;
+      });
+
+      context += `\n══════ RESUMEN CALLS SEMANA ══════
+Total: ${weekCalls.data.length} | Completadas: ${completed.length}
+Por miembro: ${Object.entries(byMember).map(([m, c]) => `${m}: ${c}`).join(', ')}
+`;
+      // Show completed calls with results
+      completed.slice(0, 5).forEach((call: any) => {
+        context += `✅ ${call.company_name} (${call.team_member}): ${call.call_result} ${call.duration_minutes ? `- ${call.duration_minutes}min` : ''}
+`;
+      });
+    }
+  }
+
+  // Si pregunta sobre propuestas
+  if (lowerMessage.includes('propuesta') || lowerMessage.includes('proposal') || lowerMessage.includes('cotizaci')) {
+    const { data: proposals } = await supabase
+      .from('proposals')
+      .select('id, name, status, mrr_usd, fee_usd, currency, sent_at, version, projects(name, clients(company_name))')
+      .order('updated_at', { ascending: false })
+      .limit(15);
+
+    if (proposals && proposals.length > 0) {
+      context += `\n\n══════ PROPUESTAS ══════\n`;
+      proposals.forEach((p: any) => {
+        const client = p.projects?.clients?.company_name || 'N/A';
+        context += `📄 ${p.name} v${p.version} (${p.status})
+   - Cliente: ${client} | Proyecto: ${p.projects?.name || 'N/A'}
+   - MRR: $${Number(p.mrr_usd || 0).toLocaleString()} | Fee: $${Number(p.fee_usd || 0).toLocaleString()} (${p.currency})
+   ${p.sent_at ? `- Enviada: ${p.sent_at.split('T')[0]}` : '- No enviada aún'}
+`;
+      });
+    }
+  }
+
+  // Si pregunta sobre el equipo
+  if (lowerMessage.includes('equipo') || lowerMessage.includes('team') || lowerMessage.includes('miembro') || lowerMessage.includes('quién') || lowerMessage.includes('quien')) {
+    const { data: teamMembers } = await supabase
+      .from('team_members')
+      .select('name, slug, role, is_active')
+      .eq('is_active', true);
+
+    if (teamMembers && teamMembers.length > 0) {
+      context += `\n\n══════ EQUIPO ══════\n`;
+      teamMembers.forEach((m: any) => {
+        context += `👤 ${m.name} (${m.slug}) - Rol: ${m.role}\n`;
+      });
+    }
+
+    // Also get user roles
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('display_name, email, role');
+
+    if (userRoles && userRoles.length > 0) {
+      context += `\nUSUARIOS DEL SISTEMA:\n`;
+      userRoles.forEach((u: any) => {
+        context += `👤 ${u.display_name} (${u.email}) - Rol: ${u.role}\n`;
+      });
+    }
+  }
+
+  // Si pregunta sobre tareas
+  if (lowerMessage.includes('tarea') || lowerMessage.includes('task') || lowerMessage.includes('pendiente') || lowerMessage.includes('blocker') || lowerMessage.includes('backlog')) {
+    const { data: tasks } = await supabase
+      .from('project_tasks')
+      .select('id, title, status, priority, assigned_to, due_date, project_id, projects(name, clients(company_name))')
+      .not('status', 'eq', 'done')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(20);
+
+    if (tasks && tasks.length > 0) {
+      const overdue = tasks.filter((t: any) => t.due_date && new Date(t.due_date) < new Date());
+      const byStatus: any = {};
+      tasks.forEach((t: any) => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; });
+
+      context += `\n\n══════ TAREAS PENDIENTES (${tasks.length}) ══════\n`;
+      context += `Por estado: ${Object.entries(byStatus).map(([s, c]) => `${s}: ${c}`).join(' | ')}\n`;
+      if (overdue.length > 0) {
+        context += `🚨 VENCIDAS: ${overdue.length}\n`;
+        overdue.slice(0, 5).forEach((t: any) => {
+          context += `   - ${t.title} (${t.projects?.name || 'N/A'}) - Asignada: ${t.assigned_to || 'N/A'} - Vencía: ${t.due_date}\n`;
+        });
+      }
+      context += `\nTareas próximas:\n`;
+      tasks.filter((t: any) => !overdue.includes(t)).slice(0, 10).forEach((t: any) => {
+        context += `   • ${t.title} [${t.status}] (${t.projects?.name || 'N/A'}) - ${t.assigned_to || 'Sin asignar'} ${t.due_date ? `- Vence: ${t.due_date}` : ''}\n`;
+      });
+    }
+  }
+
   // Buscar por nombre de empresa específico
   const companyNameMatch = message.match(/(?:empresa|cliente|lead|company|sobre)\s+["']?([A-Za-zÀ-ÿ\s]+)["']?/i);
   if (companyNameMatch) {
@@ -728,7 +903,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { message, sessionId, pageContext } = await req.json();
+    const { message, sessionId, pageContext, userName, userRole } = await req.json();
 
     if (!message) {
       return new Response(
@@ -778,7 +953,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4096,
-        system: SYSTEM_PROMPT + '\n\nCONTEXTO ACTUAL DEL SISTEMA:\n' + fullContext,
+        system: buildSystemPrompt(userName, userRole) + '\n\nCONTEXTO ACTUAL DEL SISTEMA:\n' + fullContext,
         messages: messages,
         stream: true,
       }),
