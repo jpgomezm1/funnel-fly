@@ -56,7 +56,7 @@ export default function Calls() {
   const [allSource, setAllSource] = useState<CallSource | 'all'>('all');
 
   // Filters for analytics
-  const [analyticsDateFilter, setAnalyticsDateFilter] = useState<DateFilter>('this_month');
+  const [analyticsDateFilter, setAnalyticsDateFilter] = useState<DateFilter>('all');
   const [analyticsTeamMember, setAnalyticsTeamMember] = useState<CallTeamMember | 'all'>('all');
   const [analyticsSource, setAnalyticsSource] = useState<CallSource | 'all'>('all');
 
