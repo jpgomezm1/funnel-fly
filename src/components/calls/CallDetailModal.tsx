@@ -47,6 +47,7 @@ import {
   FileText,
   Sparkles,
   Download,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateCallPDF } from '@/lib/generateCallPDF';
@@ -417,6 +418,17 @@ export function CallDetailModal({ open, onClose, call, onEdit }: CallDetailModal
                       </div>
                     )}
                   </div>
+
+                  {/* Next Step */}
+                  {call.next_step && (
+                    <div className="p-4 border-2 border-primary/30 bg-primary/5 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ArrowRight className="h-5 w-5 text-primary" />
+                        <h4 className="font-semibold text-sm uppercase tracking-wide text-primary">Next Step</h4>
+                      </div>
+                      <p className="text-base font-medium">{call.next_step}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

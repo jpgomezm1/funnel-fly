@@ -115,6 +115,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
   // Qualification form state
   const [qualification, setQualification] = useState<CallQualification>({});
+  const [nextStep, setNextStep] = useState('');
 
   const { updateCall, isUpdating } = useCallMutations();
 
@@ -129,6 +130,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
       setKeyNotes(call.key_notes || []);
       setNewNote('');
       setSkippedDiscovery(false);
+      setNextStep(call.next_step || '');
 
       if (call.qualification) {
         setQualification(call.qualification);
@@ -149,6 +151,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
     setKeyNotes([]);
     setNewNote('');
     setSkippedDiscovery(false);
+    setNextStep('');
     onClose();
   };
 
@@ -233,9 +236,10 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
       case 9:
         return !!qualification.qualification_decision; // REQUIRED: Decision
       case 10:
-        // Justification max length check only if provided
-        return !qualification.decision_justification ||
-               qualification.decision_justification.length <= 300;
+        // Next step is REQUIRED, justification max length check only if provided
+        return nextStep.trim().length > 0 &&
+               (!qualification.decision_justification ||
+               qualification.decision_justification.length <= 300);
       default:
         return true;
     }
@@ -256,7 +260,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
   };
 
   const handleSave = async () => {
-    if (!call || !qualification.qualification_decision) return;
+    if (!call || !qualification.qualification_decision || !nextStep.trim()) return;
 
     try {
       // Lock the client problem description after first save
@@ -277,6 +281,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
         transcript: transcript.trim() || null,
         key_notes: keyNotes.length > 0 ? keyNotes : null,
         qualification: finalQualification,
+        next_step: nextStep.trim(),
       } as any);
 
       handleClose();
@@ -992,7 +997,7 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <CheckCircle className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Justificación de la Decisión</h3>
+              <h3 className="text-lg font-semibold">Next Step y Justificación</h3>
             </div>
 
             <div className="p-4 bg-muted/50 rounded-lg mb-4">
@@ -1010,13 +1015,36 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
               </div>
             </div>
 
+            {/* Next Step - REQUIRED */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Target className="h-4 w-4 text-primary" />
+                Próximo Paso (Next Step) <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                value={nextStep}
+                onChange={(e) => setNextStep(e.target.value)}
+                placeholder="Ej: Enviar propuesta de Fase 0, Agendar segunda llamada con el CEO, Enviar caso de estudio, etc."
+                rows={3}
+                className={cn(
+                  !nextStep.trim() && "border-destructive focus-visible:ring-destructive"
+                )}
+              />
+              {!nextStep.trim() && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Este campo es obligatorio
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>Justificación breve de la decisión tomada (opcional)</Label>
               <Textarea
                 value={qualification.decision_justification || ''}
                 onChange={(e) => updateQualification('decision_justification', e.target.value)}
                 placeholder="Explica brevemente por qué tomaste esta decisión..."
-                rows={4}
+                rows={3}
                 maxLength={300}
               />
               <p className="text-xs text-muted-foreground text-right">
@@ -1026,8 +1054,8 @@ export function CloseCallModal({ open, onClose, call }: CloseCallModalProps) {
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                Este campo es opcional pero útil para auditoría futura.
-                Sé conciso y objetivo.
+                El <strong>Next Step</strong> es obligatorio para poder cerrar la llamada.
+                La justificación es opcional pero útil para auditoría futura.
               </p>
             </div>
           </div>

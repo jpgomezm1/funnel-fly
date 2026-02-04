@@ -40,6 +40,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Eye,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,7 +55,7 @@ interface CallCardProps {
 // Team member colors for avatars
 const TEAM_MEMBER_COLORS: Record<CallTeamMember, string> = {
   juan_pablo: 'bg-blue-500',
-  sara: 'bg-purple-500',
+  sara: 'bg-orange-500',
   agustin: 'bg-emerald-500',
 };
 
@@ -226,6 +227,19 @@ export function CallCard({ call, onEdit, onDelete, onClose, onViewDetail }: Call
                   </Badge>
                 )}
               </div>
+
+              {/* Next Step for closed calls */}
+              {isPast && call.call_result && call.next_step && (
+                <div className="mt-3 p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-primary mb-0.5">Next Step</p>
+                      <p className="text-sm text-foreground">{call.next_step}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right side - Team member and actions */}

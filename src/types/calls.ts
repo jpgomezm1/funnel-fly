@@ -98,6 +98,7 @@ export interface Call {
   notes?: string | null;
   duration_minutes?: number | null;
   qualification?: CallQualification | null;
+  next_step?: string | null;
   created_at: string;
   updated_at: string;
 }
