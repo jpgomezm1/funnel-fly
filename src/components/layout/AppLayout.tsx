@@ -25,6 +25,7 @@ import {
   BookOpen,
   Phone,
   MessageSquarePlus,
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -284,6 +285,21 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Footer with feedback and logout */}
           <div className="px-3 py-4 border-t border-sidebar-border space-y-2">
+            {role !== 'socio' && (
+              <Link
+                to="/resources"
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  location.pathname === '/resources'
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                )}
+              >
+                <FolderOpen className="h-4 w-4" />
+                Recursos
+              </Link>
+            )}
             <Link
               to="/feedback"
               onClick={() => setSidebarOpen(false)}
