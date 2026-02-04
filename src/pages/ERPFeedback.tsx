@@ -45,6 +45,8 @@ import {
   HelpCircle,
   User,
   Calendar,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useERPFeedback } from '@/hooks/useERPFeedback';
@@ -96,6 +98,7 @@ export default function ERPFeedback() {
   const [statusFilter, setStatusFilter] = useState<ERPFeedbackStatus | 'ALL'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<ERPFeedbackCategory | 'ALL'>('ALL');
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -110,6 +113,24 @@ export default function ERPFeedback() {
       category: 'improvement',
       priority: 'medium',
     });
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Check if description is long enough to need expansion (roughly more than 2 lines)
+  const isDescriptionLong = (description?: string | null) => {
+    if (!description) return false;
+    return description.length > 150;
   };
 
   const filteredItems = feedbackItems.filter((item) => {
@@ -376,9 +397,34 @@ export default function ERPFeedback() {
                           </div>
 
                           {item.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {item.description}
-                            </p>
+                            <div className="mt-2">
+                              <p className={cn(
+                                "text-sm text-muted-foreground whitespace-pre-wrap",
+                                !expandedItems.has(item.id) && isDescriptionLong(item.description) && "line-clamp-2"
+                              )}>
+                                {item.description}
+                              </p>
+                              {isDescriptionLong(item.description) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 mt-1 text-xs text-primary hover:text-primary"
+                                  onClick={() => toggleExpanded(item.id)}
+                                >
+                                  {expandedItems.has(item.id) ? (
+                                    <>
+                                      <ChevronUp className="h-3 w-3 mr-1" />
+                                      Ver menos
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown className="h-3 w-3 mr-1" />
+                                      Ver más
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           )}
 
                           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
