@@ -41,6 +41,7 @@ import {
   Pause,
   Play,
   Pencil,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFinanceTransactions } from '@/hooks/useFinanceTransactions';
@@ -61,6 +62,7 @@ import {
 } from '@/types/database';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TransactionModal } from '@/components/finance/TransactionModal';
+import { ExportExpensesDialog } from '@/components/finance/ExportExpensesDialog';
 import { toast } from '@/hooks/use-toast';
 import { formatDateToBogota } from '@/lib/date-utils';
 
@@ -140,6 +142,7 @@ export default function FinanceExpenses() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // Get transactions based on active tab
   const getTabTransactions = () => {
@@ -249,10 +252,16 @@ export default function FinanceExpenses() {
             Control de gastos fijos y variables
           </p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Gasto
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Gasto
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -672,6 +681,12 @@ export default function FinanceExpenses() {
         transactionType="EXPENSE"
         onSave={handleSave}
         isSaving={isCreating || isUpdating}
+      />
+
+      {/* Export Dialog */}
+      <ExportExpensesDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
       />
     </div>
   );
