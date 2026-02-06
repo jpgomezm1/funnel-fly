@@ -11,21 +11,49 @@ export type ResourceTag =
   | 'onboarding'
   | 'otro';
 
-export interface TeamResource {
+export interface ResourceDocument {
   id: string;
-  title: string;
-  description?: string | null;
-  resource_type: ResourceType;
+  resource_id: string;
+  document_type: ResourceType;
   url?: string | null;
   file_path?: string | null;
   file_name?: string | null;
   file_size?: number | null;
   mime_type?: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface NewResourceDocument {
+  document_type: ResourceType;
+  url?: string;
+  file?: File;
+  file_name?: string;
+  tempId: string;
+}
+
+export interface TeamResource {
+  id: string;
+  title: string;
+  description?: string | null;
   tags: ResourceTag[];
   uploaded_by?: string | null;
   uploaded_by_name?: string | null;
   created_at: string;
   updated_at: string;
+  documents: ResourceDocument[];
+  /** @deprecated kept for backwards compatibility during migration */
+  resource_type?: ResourceType;
+  /** @deprecated */
+  url?: string | null;
+  /** @deprecated */
+  file_path?: string | null;
+  /** @deprecated */
+  file_name?: string | null;
+  /** @deprecated */
+  file_size?: number | null;
+  /** @deprecated */
+  mime_type?: string | null;
 }
 
 export const RESOURCE_TAG_LABELS: Record<ResourceTag, string> = {
