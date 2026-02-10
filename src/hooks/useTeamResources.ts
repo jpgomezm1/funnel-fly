@@ -87,10 +87,14 @@ export function useTeamResources() {
     }) => {
       const { documents, ...resourceData } = params;
 
+      // Compute resource_type for legacy NOT NULL column
+      const hasFile = documents.some(d => d.document_type === 'file');
+      const resource_type = hasFile ? 'file' : 'link';
+
       // 1. Create parent resource
       const { data: resource, error: resourceError } = await (supabase as any)
         .from('team_resources')
-        .insert(resourceData)
+        .insert({ ...resourceData, resource_type })
         .select()
         .single();
 
