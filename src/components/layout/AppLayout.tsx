@@ -26,6 +26,7 @@ import {
   Phone,
   MessageSquarePlus,
   FolderOpen,
+  CheckSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -298,6 +299,21 @@ export function AppLayout({ children }: AppLayoutProps) {
               >
                 <FolderOpen className="h-4 w-4" />
                 Recursos
+              </Link>
+            )}
+            {role !== 'socio' && (
+              <Link
+                to="/todos"
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                  location.pathname === '/todos'
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
+                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                )}
+              >
+                <CheckSquare className="h-4 w-4" />
+                To-Do
               </Link>
             )}
             <Link

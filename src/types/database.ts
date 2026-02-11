@@ -1259,3 +1259,121 @@ export const ERP_FEEDBACK_STATUS_COLORS: Record<ERPFeedbackStatus, string> = {
   'completed': 'bg-emerald-100 text-emerald-700',
   'rejected': 'bg-red-100 text-red-700',
 };
+
+// ==========================================
+// TO-DO MODULE TYPES
+// ==========================================
+
+export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type TodoPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface Todo {
+  id: string;
+  title: string;
+  description?: string;
+  status: TodoStatus;
+  priority: TodoPriority;
+  due_date?: string;
+  completed_at?: string;
+  completed_by?: string;
+  parent_todo_id?: string;
+  order_index: number;
+  created_by: string;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodoAssignee {
+  id: string;
+  todo_id: string;
+  user_id: string;
+  user_display_name?: string;
+  assigned_at: string;
+  assigned_by?: string;
+}
+
+export interface TodoComment {
+  id: string;
+  todo_id: string;
+  content: string;
+  author_id: string;
+  author_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodoLabel {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface TodoLabelAssignment {
+  id: string;
+  todo_id: string;
+  label_id: string;
+}
+
+export interface TodoAttachment {
+  id: string;
+  todo_id: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_by?: string;
+  uploaded_by_name?: string;
+  created_at: string;
+}
+
+export interface TodoNotificationSettings {
+  id: string;
+  user_id: string;
+  notify_on_assignment: boolean;
+  notify_on_comment: boolean;
+  notify_on_due_date: boolean;
+  notify_on_status_change: boolean;
+  due_date_reminder_hours: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodoWithRelations extends Todo {
+  assignees?: TodoAssignee[];
+  labels?: TodoLabel[];
+  subtasks?: Todo[];
+  comments_count?: number;
+  attachments_count?: number;
+}
+
+export const TODO_STATUS_LABELS: Record<TodoStatus, string> = {
+  'pending': 'Pendiente',
+  'in_progress': 'En Progreso',
+  'completed': 'Completado',
+  'cancelled': 'Cancelado',
+};
+
+export const TODO_STATUS_COLORS: Record<TodoStatus, string> = {
+  'pending': 'bg-slate-100 text-slate-700',
+  'in_progress': 'bg-amber-100 text-amber-700',
+  'completed': 'bg-emerald-100 text-emerald-700',
+  'cancelled': 'bg-red-100 text-red-700',
+};
+
+export const TODO_PRIORITY_LABELS: Record<TodoPriority, string> = {
+  'low': 'Baja',
+  'medium': 'Media',
+  'high': 'Alta',
+  'urgent': 'Urgente',
+};
+
+export const TODO_PRIORITY_COLORS: Record<TodoPriority, string> = {
+  'low': 'bg-slate-100 text-slate-600',
+  'medium': 'bg-blue-100 text-blue-600',
+  'high': 'bg-amber-100 text-amber-600',
+  'urgent': 'bg-red-100 text-red-600',
+};
+
+export const TODO_STATUS_ORDER: TodoStatus[] = ['pending', 'in_progress', 'completed', 'cancelled'];

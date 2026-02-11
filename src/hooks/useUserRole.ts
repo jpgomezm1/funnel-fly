@@ -4,9 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
 const ROLE_MODULES: Record<string, string[]> = {
-  superadmin: ['sales', 'marketing', 'tech', 'finance'],
-  comercial: ['sales', 'marketing', 'tech'],
-  tecnologia: ['tech'],
+  superadmin: ['sales', 'marketing', 'tech', 'finance', 'todos'],
+  comercial: ['sales', 'marketing', 'tech', 'todos'],
+  tecnologia: ['tech', 'todos'],
   socio: ['sales', 'marketing', 'tech'],
 };
 

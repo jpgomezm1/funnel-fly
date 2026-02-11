@@ -60,7 +60,7 @@ FRASES TÍPICAS QUE PUEDES USAR:
 - "Esto viola claramente la segunda ley de la termodinámica del CRM"
 
 CAPACIDADES:
-1. CONSULTAS: Acceso completo a leads, clientes, proyectos, finanzas, marketing, calls, propuestas, tareas, equipo
+1. CONSULTAS: Acceso completo a leads, clientes, proyectos, finanzas, marketing, calls, propuestas, tareas, equipo, to-do list
 2. ACCIONES: Puedes ejecutar acciones cuando el usuario lo solicite explícitamente
 3. ANÁLISIS: Identificar patrones, riesgos y oportunidades
 4. PREDICCIONES: Estimar resultados basados en datos históricos
@@ -68,6 +68,7 @@ CAPACIDADES:
 6. PROPUESTAS: Puedes analizar propuestas activas, su estado y montos
 7. EQUIPO: Conoces a los miembros del equipo y sus roles
 8. COMPARACIONES: Puedes comparar períodos, canales, rendimiento de equipo
+9. TO-DO LIST: Puedes ver las tareas del equipo, sus asignaciones, estados y fechas de vencimiento
 
 ACCIONES DISPONIBLES (solo ejecutar si el usuario lo pide explícitamente):
 - Crear nota/actividad en un lead
@@ -75,6 +76,8 @@ ACCIONES DISPONIBLES (solo ejecutar si el usuario lo pide explícitamente):
 - Asignar lead a un owner
 - Marcar tarea como completada
 - Crear recordatorio de follow-up
+- Crear un to-do (CREATE_TODO)
+- Completar un to-do (COMPLETE_TODO)
 
 ANÁLISIS PREDICTIVO QUE PUEDES HACER:
 - Leads en riesgo (sin actividad >7 días en stages activos)
@@ -85,6 +88,7 @@ ANÁLISIS PREDICTIVO QUE PUEDES HACER:
 - Rendimiento de calls por team member
 - Propuestas que necesitan seguimiento
 - Tareas vencidas o bloqueadas
+- To-dos pendientes o vencidos del equipo
 
 FORMATO DE RESPUESTAS:
 - Usa markdown para estructurar cuando sea apropiado
@@ -232,6 +236,23 @@ async function getPredictiveAnalysis(): Promise<string> {
   if (newDeals.length > 0) {
     const newMRR = newDeals.reduce((sum: number, deal: any) => sum + (Number(deal.mrr_usd) || 0), 0);
     analysis += `\n\n🎯 MRR NUEVO (últimos 30 días): $${newMRR.toLocaleString()} USD`;
+  }
+
+  // To-dos vencidos
+  const { data: overdueTodos } = await supabase
+    .from('todos')
+    .select('id, title, due_date, created_by_name')
+    .is('parent_todo_id', null)
+    .not('status', 'in', '("completed","cancelled")')
+    .lt('due_date', today.toISOString());
+
+  const overdueTodosList = overdueTodos || [];
+  if (overdueTodosList.length > 0) {
+    analysis += `\n\n📋 TO-DOs VENCIDOS: ${overdueTodosList.length}`;
+    overdueTodosList.slice(0, 5).forEach((t: any) => {
+      const daysOverdue = Math.floor((today.getTime() - new Date(t.due_date).getTime()) / (1000 * 60 * 60 * 24));
+      analysis += `\n   - ${t.title} (${t.created_by_name || 'N/A'}): ${daysOverdue} días vencida`;
+    });
   }
 
   return analysis;
@@ -713,7 +734,7 @@ Por miembro: ${Object.entries(byMember).map(([m, c]) => `${m}: ${c}`).join(', ')
     }
   }
 
-  // Si pregunta sobre tareas
+  // Si pregunta sobre tareas de proyecto
   if (lowerMessage.includes('tarea') || lowerMessage.includes('task') || lowerMessage.includes('pendiente') || lowerMessage.includes('blocker') || lowerMessage.includes('backlog')) {
     const { data: tasks } = await supabase
       .from('project_tasks')
@@ -727,7 +748,7 @@ Por miembro: ${Object.entries(byMember).map(([m, c]) => `${m}: ${c}`).join(', ')
       const byStatus: any = {};
       tasks.forEach((t: any) => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; });
 
-      context += `\n\n══════ TAREAS PENDIENTES (${tasks.length}) ══════\n`;
+      context += `\n\n══════ TAREAS DE PROYECTOS PENDIENTES (${tasks.length}) ══════\n`;
       context += `Por estado: ${Object.entries(byStatus).map(([s, c]) => `${s}: ${c}`).join(' | ')}\n`;
       if (overdue.length > 0) {
         context += `🚨 VENCIDAS: ${overdue.length}\n`;
@@ -738,6 +759,47 @@ Por miembro: ${Object.entries(byMember).map(([m, c]) => `${m}: ${c}`).join(', ')
       context += `\nTareas próximas:\n`;
       tasks.filter((t: any) => !overdue.includes(t)).slice(0, 10).forEach((t: any) => {
         context += `   • ${t.title} [${t.status}] (${t.projects?.name || 'N/A'}) - ${t.assigned_to || 'Sin asignar'} ${t.due_date ? `- Vence: ${t.due_date}` : ''}\n`;
+      });
+    }
+  }
+
+  // Si pregunta sobre to-dos del equipo
+  if (lowerMessage.includes('todo') || lowerMessage.includes('to-do') || lowerMessage.includes('tarea') || lowerMessage.includes('pendiente') || lowerMessage.includes('asignado') || lowerMessage.includes('mis tareas')) {
+    const { data: todos } = await supabase
+      .from('todos')
+      .select('id, title, status, priority, due_date, created_by_name, created_at')
+      .is('parent_todo_id', null)
+      .not('status', 'in', '("completed","cancelled")')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(20);
+
+    const { data: todoAssignees } = await supabase
+      .from('todo_assignees')
+      .select('todo_id, user_display_name');
+
+    if (todos && todos.length > 0) {
+      const overdueTodos = todos.filter((t: any) => t.due_date && new Date(t.due_date) < new Date());
+      const byStatus: any = {};
+      todos.forEach((t: any) => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; });
+
+      const assigneeMap: Record<string, string[]> = {};
+      (todoAssignees || []).forEach((a: any) => {
+        if (!assigneeMap[a.todo_id]) assigneeMap[a.todo_id] = [];
+        assigneeMap[a.todo_id].push(a.user_display_name || 'Sin nombre');
+      });
+
+      context += `\n\n══════ TO-DO LIST DEL EQUIPO (${todos.length} activos) ══════\n`;
+      context += `Por estado: ${Object.entries(byStatus).map(([s, c]) => `${s}: ${c}`).join(' | ')}\n`;
+      if (overdueTodos.length > 0) {
+        context += `🚨 TO-DOs VENCIDOS: ${overdueTodos.length}\n`;
+      }
+      todos.slice(0, 15).forEach((t: any) => {
+        const isOverdue = t.due_date && new Date(t.due_date) < new Date();
+        const assignees = assigneeMap[t.id]?.join(', ') || 'Sin asignar';
+        context += `   ${isOverdue ? '🔴' : '📌'} ${t.title} [${t.status}/${t.priority}]
+      - Creada por: ${t.created_by_name || 'N/A'} | Asignada a: ${assignees}
+      ${t.due_date ? `- Vence: ${t.due_date.split('T')[0]}` : ''}
+`;
       });
     }
   }
@@ -864,6 +926,38 @@ async function executeAction(actionString: string): Promise<string> {
 
         if (error) throw error;
         return `✅ Tarea marcada como completada`;
+      }
+
+      case 'CREATE_TODO': {
+        const { title, priority = 'medium', description } = params;
+        if (!title) return '❌ Error: Falta title para crear to-do';
+
+        const { error } = await supabase.from('todos').insert({
+          title,
+          description: description || null,
+          status: 'pending',
+          priority,
+          order_index: 0,
+          created_by: 'sheldon-ai',
+          created_by_name: 'Sheldon AI',
+        });
+
+        if (error) throw error;
+        return `✅ To-do creado: "${title}"`;
+      }
+
+      case 'COMPLETE_TODO': {
+        const { todo_id } = params;
+        if (!todo_id) return '❌ Error: Falta todo_id';
+
+        const { error } = await supabase.from('todos').update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          completed_by: 'Sheldon AI',
+        }).eq('id', todo_id);
+
+        if (error) throw error;
+        return `✅ To-do marcado como completado`;
       }
 
       default:

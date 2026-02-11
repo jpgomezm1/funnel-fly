@@ -13,6 +13,7 @@ import {
   FileText,
   ListChecks,
   CalendarDays,
+  CheckSquare,
 } from 'lucide-react';
 import { useLeads } from '@/hooks/useLeads';
 import { useClients } from '@/hooks/useClients';
@@ -89,6 +90,43 @@ const Home = () => {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'in_progress');
       if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  // Fetch my pending to-dos
+  const { data: myPendingTodos = 0 } = useQuery({
+    queryKey: ['home-my-pending-todos'],
+    queryFn: async () => {
+      // Count todos where user is assigned and status is pending/in_progress
+      const { data: userRoleData } = await supabase.auth.getUser();
+      const userId = userRoleData?.user?.id;
+      if (!userId) return 0;
+
+      const { data: assignedTodoIds } = await (supabase as any)
+        .from('todo_assignees')
+        .select('todo_id')
+        .eq('user_id', userId);
+
+      if (!assignedTodoIds || assignedTodoIds.length === 0) {
+        // Also count todos created by user
+        const { count } = await (supabase as any)
+          .from('todos')
+          .select('*', { count: 'exact', head: true })
+          .eq('created_by', userId)
+          .is('parent_todo_id', null)
+          .in('status', ['pending', 'in_progress']);
+        return count ?? 0;
+      }
+
+      const todoIds = assignedTodoIds.map((a: any) => a.todo_id);
+      const { count } = await (supabase as any)
+        .from('todos')
+        .select('*', { count: 'exact', head: true })
+        .is('parent_todo_id', null)
+        .in('status', ['pending', 'in_progress'])
+        .in('id', todoIds);
+
       return count ?? 0;
     },
   });
@@ -184,8 +222,8 @@ const Home = () => {
       ? Math.max(0, Math.ceil((new Date(nextWebinar.event_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
       : null;
 
-    return { activeLeads: activeLeadsCount, activeClients: activeClientsCount, activeProjects: activeProjectsCount, totalMRR, callsThisWeek, activeProposals, tasksInProgress, daysToWebinar };
-  }, [leads, clients, projects, activeDeals, weeklyMetrics, activeProposals, tasksInProgress, nextWebinar]);
+    return { activeLeads: activeLeadsCount, activeClients: activeClientsCount, activeProjects: activeProjectsCount, totalMRR, callsThisWeek, activeProposals, tasksInProgress, daysToWebinar, myPendingTodos };
+  }, [leads, clients, projects, activeDeals, weeklyMetrics, activeProposals, tasksInProgress, nextWebinar, myPendingTodos]);
 
   const { hasAccess, displayName } = useUserRole();
   const firstName = displayName?.split(' ')[0] ?? '';
@@ -456,6 +494,26 @@ const Home = () => {
                       <p className="text-sm text-zinc-500 truncate">
                         {nextWebinar ? `Próx: ${nextWebinar.name}` : 'Sin webinars'}
                       </p>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {hasAccess('todos') && (
+                <Link to="/todos" className="group">
+                  <div className="relative bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/50 rounded-2xl p-5 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all duration-300 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                          <CheckSquare className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-purple-400 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                      <p className="text-2xl lg:text-3xl font-bold text-white mb-0.5">
+                        {metrics.myPendingTodos}
+                      </p>
+                      <p className="text-sm text-zinc-500">Mis Tareas Pendientes</p>
                     </div>
                   </div>
                 </Link>
