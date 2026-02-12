@@ -8,6 +8,8 @@ import { useTodoLabels } from '@/hooks/useTodoLabels';
 import { useTodoNotifications } from '@/hooks/useTodoNotifications';
 import { useUserRole } from '@/hooks/useUserRole';
 import { TodoWithRelations, TodoStatus, TodoPriority } from '@/types/database';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { TodoStatsCards } from '@/components/todos/TodoStatsCards';
 import { TodoFilters } from '@/components/todos/TodoFilters';
 import { TodoCard } from '@/components/todos/TodoCard';
@@ -38,12 +40,27 @@ export default function Todos() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TodoStatus | 'ALL'>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<TodoPriority | 'ALL'>('ALL');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<TodoWithRelations | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [editTodo, setEditTodo] = useState<TodoWithRelations | null>(null);
+
+  // Fetch team members for assignee filter (same queryKey as TodoCreateDialog for cache dedup)
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['team-users-for-todos'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('user_roles')
+        .select('user_id, display_name, role')
+        .neq('role', 'socio');
+
+      if (error) throw error;
+      return data as { user_id: string; display_name: string; role: string }[];
+    },
+  });
 
   // Filter todos
   const filteredTodos = todos.filter(todo => {
@@ -53,8 +70,9 @@ export default function Todos() {
 
     const matchesStatus = statusFilter === 'ALL' || todo.status === statusFilter;
     const matchesPriority = priorityFilter === 'ALL' || todo.priority === priorityFilter;
+    const matchesAssignee = assigneeFilter === 'ALL' || todo.assignees?.some(a => a.user_id === assigneeFilter);
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
   });
 
   // Filtered kanban data
@@ -231,6 +249,10 @@ export default function Todos() {
         onPriorityFilterChange={setPriorityFilter}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        assigneeFilter={assigneeFilter}
+        onAssigneeFilterChange={setAssigneeFilter}
+        teamMembers={teamMembers}
+        showAssigneeFilter={role === 'superadmin'}
       />
 
       {/* Content */}
@@ -239,11 +261,11 @@ export default function Todos() {
           <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No hay tareas</h3>
           <p className="text-muted-foreground mb-4">
-            {search || statusFilter !== 'ALL' || priorityFilter !== 'ALL'
+            {search || statusFilter !== 'ALL' || priorityFilter !== 'ALL' || assigneeFilter !== 'ALL'
               ? 'No se encontraron tareas con los filtros aplicados'
               : 'Crea tu primera tarea para empezar'}
           </p>
-          {!search && statusFilter === 'ALL' && priorityFilter === 'ALL' && (
+          {!search && statusFilter === 'ALL' && priorityFilter === 'ALL' && assigneeFilter === 'ALL' && (
             <Button onClick={() => { setEditTodo(null); setCreateDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Nueva Tarea

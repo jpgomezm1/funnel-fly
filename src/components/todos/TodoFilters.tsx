@@ -7,8 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Filter, LayoutList, Columns3 } from 'lucide-react';
+import { Search, Filter, LayoutList, Columns3, User } from 'lucide-react';
 import { TodoStatus, TodoPriority } from '@/types/database';
+
+interface TeamMember {
+  user_id: string;
+  display_name: string;
+  role: string;
+}
 
 interface TodoFiltersProps {
   search: string;
@@ -19,6 +25,10 @@ interface TodoFiltersProps {
   onPriorityFilterChange: (value: TodoPriority | 'ALL') => void;
   viewMode: 'list' | 'kanban';
   onViewModeChange: (mode: 'list' | 'kanban') => void;
+  assigneeFilter?: string;
+  onAssigneeFilterChange?: (value: string) => void;
+  teamMembers?: TeamMember[];
+  showAssigneeFilter?: boolean;
 }
 
 export function TodoFilters({
@@ -30,10 +40,14 @@ export function TodoFilters({
   onPriorityFilterChange,
   viewMode,
   onViewModeChange,
+  assigneeFilter,
+  onAssigneeFilterChange,
+  teamMembers = [],
+  showAssigneeFilter = false,
 }: TodoFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      <div className="relative flex-1">
+    <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+      <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar tareas..."
@@ -69,6 +83,23 @@ export function TodoFilters({
           <SelectItem value="urgent">Urgente</SelectItem>
         </SelectContent>
       </Select>
+
+      {showAssigneeFilter && onAssigneeFilterChange && (
+        <Select value={assigneeFilter || 'ALL'} onValueChange={onAssigneeFilterChange}>
+          <SelectTrigger className="w-[180px]">
+            <User className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Persona" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todas las personas</SelectItem>
+            {teamMembers.map(member => (
+              <SelectItem key={member.user_id} value={member.user_id}>
+                {member.display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       <div className="flex border rounded-md">
         <Button

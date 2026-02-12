@@ -23,6 +23,7 @@ import { TodoPriority, TodoLabel, TodoWithRelations } from '@/types/database';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserRoleItem {
   user_id: string;
@@ -55,6 +56,9 @@ export function TodoCreateDialog({
   isSubmitting,
   editTodo,
 }: TodoCreateDialogProps) {
+  const { user } = useAuth();
+  const currentUserId = user?.id;
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TodoPriority>('medium');
@@ -76,6 +80,13 @@ export function TodoCreateDialog({
     },
   });
 
+  // Sort members: current user first, then alphabetical
+  const sortedMembers = [...teamMembers].sort((a, b) => {
+    if (a.user_id === currentUserId) return -1;
+    if (b.user_id === currentUserId) return 1;
+    return (a.display_name || '').localeCompare(b.display_name || '');
+  });
+
   // Populate form when editing
   useEffect(() => {
     if (editTodo) {
@@ -86,16 +97,22 @@ export function TodoCreateDialog({
       setSelectedAssignees(editTodo.assignees?.map(a => a.user_id) || []);
       setSelectedLabels(editTodo.labels?.map(l => l.id) || []);
     } else {
-      resetForm();
+      // Auto-select current user when creating a new task
+      setTitle('');
+      setDescription('');
+      setPriority('medium');
+      setDueDate('');
+      setSelectedAssignees(currentUserId ? [currentUserId] : []);
+      setSelectedLabels([]);
     }
-  }, [editTodo, open]);
+  }, [editTodo, open, currentUserId]);
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setPriority('medium');
     setDueDate('');
-    setSelectedAssignees([]);
+    setSelectedAssignees(currentUserId ? [currentUserId] : []);
     setSelectedLabels([]);
   };
 
@@ -196,19 +213,26 @@ export function TodoCreateDialog({
           <div className="space-y-2">
             <Label>Asignar a</Label>
             <div className="flex flex-wrap gap-1.5">
-              {teamMembers.map(member => (
-                <Badge
-                  key={member.user_id}
-                  variant={selectedAssignees.includes(member.user_id) ? 'default' : 'outline'}
-                  className="cursor-pointer text-xs"
-                  onClick={() => toggleAssignee(member.user_id)}
-                >
-                  {member.display_name}
-                  {selectedAssignees.includes(member.user_id) && (
-                    <X className="h-3 w-3 ml-1" />
-                  )}
-                </Badge>
-              ))}
+              {sortedMembers.map(member => {
+                const isCurrentUser = member.user_id === currentUserId;
+                const isSelected = selectedAssignees.includes(member.user_id);
+                return (
+                  <Badge
+                    key={member.user_id}
+                    variant={isSelected ? 'default' : 'outline'}
+                    className={cn(
+                      'cursor-pointer text-xs',
+                      isCurrentUser && !isSelected && 'border-primary/50 bg-primary/5'
+                    )}
+                    onClick={() => toggleAssignee(member.user_id)}
+                  >
+                    {isCurrentUser ? `Yo (${member.display_name})` : member.display_name}
+                    {isSelected && (
+                      <X className="h-3 w-3 ml-1" />
+                    )}
+                  </Badge>
+                );
+              })}
             </div>
           </div>
 
