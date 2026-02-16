@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Phone, Plus, RefreshCw, BarChart3, List, Calendar, LayoutGrid } from 'lucide-react';
+import { Phone, Plus, RefreshCw, BarChart3, List, Calendar, LayoutGrid, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -23,6 +23,7 @@ import { CloseCallModal } from '@/components/calls/CloseCallModal';
 import { CallDetailModal } from '@/components/calls/CallDetailModal';
 import { CallsAnalytics } from '@/components/calls/CallsAnalytics';
 import { CallsCalendar } from '@/components/calls/CallsCalendar';
+import { ExportCallsDialog } from '@/components/calls/ExportCallsDialog';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -35,6 +36,7 @@ export default function Calls() {
   const [callToClose, setCallToClose] = useState<Call | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [callToView, setCallToView] = useState<Call | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // View modes for each tab
   const [upcomingViewMode, setUpcomingViewMode] = useState<ViewMode>('list');
@@ -194,10 +196,16 @@ export default function Calls() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Llamada
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Llamada
+          </Button>
+        </div>
       </div>
 
       {/* Weekly Metrics */}
@@ -473,6 +481,12 @@ export default function Calls() {
         onClose={handleCloseDetailModal}
         call={callToView}
         onEdit={handleEditFromDetail}
+      />
+
+      {/* Export Dialog */}
+      <ExportCallsDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
       />
 
       {/* Delete Confirmation */}
