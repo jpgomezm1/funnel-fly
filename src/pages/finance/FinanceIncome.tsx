@@ -35,6 +35,7 @@ import {
   DollarSign,
   Calendar,
   Filter,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFinanceTransactions } from '@/hooks/useFinanceTransactions';
@@ -47,6 +48,7 @@ import {
 } from '@/types/database';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TransactionModal } from '@/components/finance/TransactionModal';
+import { ExportIncomeDialog } from '@/components/finance/ExportIncomeDialog';
 import { toast } from '@/hooks/use-toast';
 import { formatDateToBogota } from '@/lib/date-utils';
 
@@ -87,6 +89,7 @@ export default function FinanceIncome() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // Filter transactions
   const filteredTransactions = incomeTransactions.filter(t => {
@@ -183,10 +186,16 @@ export default function FinanceIncome() {
             Gestiona todos los ingresos de la empresa
           </p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Ingreso
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar XLSX
+          </Button>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Ingreso
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -395,6 +404,12 @@ export default function FinanceIncome() {
         transactionType="INCOME"
         onSave={handleSave}
         isSaving={isCreating || isUpdating}
+      />
+
+      {/* Export Dialog */}
+      <ExportIncomeDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
       />
     </div>
   );

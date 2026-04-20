@@ -19,23 +19,21 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import {
   FinanceTransaction,
-  EXPENSE_CATEGORY_LABELS,
-  EXPENSE_CLASSIFICATION_LABELS,
+  INCOME_CATEGORY_LABELS,
   PAYMENT_METHOD_LABELS,
   RECURRING_FREQUENCY_LABELS,
-  ExpenseCategory,
-  ExpenseClassification,
+  IncomeCategory,
   PaymentMethod,
   RecurringFrequency,
 } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
 
-interface ExportExpensesDialogProps {
+interface ExportIncomeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialogProps) {
+export function ExportIncomeDialog({ open, onOpenChange }: ExportIncomeDialogProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isExporting, setIsExporting] = useState(false);
@@ -46,7 +44,7 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
       let query = supabase
         .from('finance_transactions')
         .select('*')
-        .eq('transaction_type', 'EXPENSE')
+        .eq('transaction_type', 'INCOME')
         .order('transaction_date', { ascending: false });
 
       if (startDate) {
@@ -56,42 +54,39 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
         query = query.lte('transaction_date', format(endDate, 'yyyy-MM-dd'));
       }
 
-      const { data: expenses, error } = await query;
+      const { data: incomes, error } = await query;
 
       if (error) throw error;
 
-      if (!expenses || expenses.length === 0) {
+      if (!incomes || incomes.length === 0) {
         toast({
           title: 'Sin datos',
-          description: 'No hay gastos para exportar en el rango de fechas seleccionado',
+          description: 'No hay ingresos para exportar en el rango de fechas seleccionado',
           variant: 'destructive',
         });
         return;
       }
 
-      const rows = (expenses as FinanceTransaction[]).map((expense) => ({
-        'Fecha': expense.transaction_date,
-        'Descripción': expense.description,
-        'Categoría': expense.expense_category
-          ? EXPENSE_CATEGORY_LABELS[expense.expense_category as ExpenseCategory]
+      const rows = (incomes as FinanceTransaction[]).map((income) => ({
+        'Fecha': income.transaction_date,
+        'Descripción': income.description,
+        'Categoría': income.income_category
+          ? INCOME_CATEGORY_LABELS[income.income_category as IncomeCategory]
           : '',
-        'Clasificación': expense.expense_classification
-          ? EXPENSE_CLASSIFICATION_LABELS[expense.expense_classification as ExpenseClassification]
+        'Fuente': income.vendor_or_source || '',
+        'Monto Original': Number(income.amount_original) || 0,
+        'Moneda': income.currency,
+        'Tasa de Cambio': income.exchange_rate != null ? Number(income.exchange_rate) : '',
+        'Monto USD': Number(income.amount_usd) || 0,
+        'Método de Pago': income.payment_method
+          ? PAYMENT_METHOD_LABELS[income.payment_method as PaymentMethod]
           : '',
-        'Proveedor': expense.vendor_or_source || '',
-        'Monto Original': Number(expense.amount_original) || 0,
-        'Moneda': expense.currency,
-        'Tasa de Cambio': expense.exchange_rate != null ? Number(expense.exchange_rate) : '',
-        'Monto USD': Number(expense.amount_usd) || 0,
-        'Método de Pago': expense.payment_method
-          ? PAYMENT_METHOD_LABELS[expense.payment_method as PaymentMethod]
+        'Referencia': income.reference_number || '',
+        'Recurrente': income.is_recurring ? 'Sí' : 'No',
+        'Frecuencia': income.recurring_frequency
+          ? RECURRING_FREQUENCY_LABELS[income.recurring_frequency as RecurringFrequency]
           : '',
-        'Referencia': expense.reference_number || '',
-        'Recurrente': expense.is_recurring ? 'Sí' : 'No',
-        'Frecuencia': expense.recurring_frequency
-          ? RECURRING_FREQUENCY_LABELS[expense.recurring_frequency as RecurringFrequency]
-          : '',
-        'Notas': expense.notes || '',
+        'Notas': income.notes || '',
       }));
 
       const totalUsd = rows.reduce((sum, r) => sum + (Number(r['Monto USD']) || 0), 0);
@@ -101,9 +96,8 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
       worksheet['!cols'] = [
         { wch: 12 }, // Fecha
         { wch: 40 }, // Descripción
-        { wch: 20 }, // Categoría
-        { wch: 14 }, // Clasificación
-        { wch: 24 }, // Proveedor
+        { wch: 22 }, // Categoría
+        { wch: 24 }, // Fuente
         { wch: 16 }, // Monto Original
         { wch: 8 },  // Moneda
         { wch: 14 }, // Tasa de Cambio
@@ -117,14 +111,14 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
 
       XLSX.utils.sheet_add_aoa(
         worksheet,
-        [[], ['', '', '', '', '', '', '', 'Total USD:', totalUsd]],
+        [[], ['', '', '', '', '', '', 'Total USD:', totalUsd]],
         { origin: -1 }
       );
 
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Gastos');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Ingresos');
 
-      let filename = 'gastos';
+      let filename = 'ingresos';
       if (startDate && endDate) {
         filename += `_${format(startDate, 'yyyy-MM-dd')}_a_${format(endDate, 'yyyy-MM-dd')}`;
       } else if (startDate) {
@@ -140,17 +134,17 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
 
       toast({
         title: 'Exportación exitosa',
-        description: `Se exportaron ${expenses.length} gastos`,
+        description: `Se exportaron ${incomes.length} ingresos`,
       });
 
       setStartDate(undefined);
       setEndDate(undefined);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error exporting expenses:', error);
+      console.error('Error exporting income:', error);
       toast({
         title: 'Error',
-        description: 'No se pudo exportar los gastos',
+        description: 'No se pudo exportar los ingresos',
         variant: 'destructive',
       });
     } finally {
@@ -169,10 +163,10 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
-            Exportar Gastos a Excel
+            Exportar Ingresos a Excel
           </DialogTitle>
           <DialogDescription>
-            Selecciona un rango de fechas para exportar los gastos. Deja vacío para exportar todo el histórico.
+            Selecciona un rango de fechas para exportar los ingresos. Deja vacío para exportar todo el histórico.
           </DialogDescription>
         </DialogHeader>
 
@@ -238,12 +232,12 @@ export function ExportExpensesDialog({ open, onOpenChange }: ExportExpensesDialo
           <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
             {startDate || endDate ? (
               <p>
-                Se exportarán los gastos
+                Se exportarán los ingresos
                 {startDate && ` desde el ${format(startDate, 'dd/MM/yyyy')}`}
                 {endDate && ` hasta el ${format(endDate, 'dd/MM/yyyy')}`}
               </p>
             ) : (
-              <p>Se exportará el histórico completo de todos los gastos</p>
+              <p>Se exportará el histórico completo de todos los ingresos</p>
             )}
           </div>
         </div>

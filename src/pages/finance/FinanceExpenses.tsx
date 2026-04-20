@@ -255,7 +255,7 @@ export default function FinanceExpenses() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setExportDialogOpen(true)}>
             <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
+            Exportar XLSX
           </Button>
           <Button onClick={handleOpenCreate}>
             <Plus className="h-4 w-4 mr-2" />
